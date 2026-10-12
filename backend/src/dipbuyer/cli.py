@@ -130,6 +130,27 @@ def cmd_openapi(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_gen_secret(_: argparse.Namespace) -> int:
+    import secrets  # noqa: PLC0415
+
+    _out(f"SESSION_SECRET={secrets.token_hex(32)}")
+    return 0
+
+
+def cmd_check_env(args: argparse.Namespace) -> int:
+    from dipbuyer.envcheck import check_env_file  # noqa: PLC0415
+
+    report = check_env_file(Path(args.path))
+    for w in report.warnings:
+        _out(f"warning: {w}")
+    for e in report.errors:
+        _out(f"error: {e}")
+    if report.ok:
+        _out(f"{args.path}: OK")
+        return 0
+    return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="dipbuyer")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -150,6 +171,10 @@ def main(argv: list[str] | None = None) -> int:
     o.add_argument("--check", metavar="PATH", help="exit 1 if PATH differs from the schema")
     o.add_argument("--from-url", metavar="URL", help="read the schema from a running backend")
     o.set_defaults(fn=cmd_openapi)
+    sub.add_parser("gen-secret").set_defaults(fn=cmd_gen_secret)
+    ce = sub.add_parser("check-env")
+    ce.add_argument("path", nargs="?", default="../.env")
+    ce.set_defaults(fn=cmd_check_env)
     args = p.parse_args(argv)
     return int(args.fn(args))
 

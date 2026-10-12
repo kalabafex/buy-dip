@@ -23,10 +23,13 @@ services:
       db:
         condition: service_healthy
     # Runs migrations, then serves the API.
-    command: >
-      sh -c "alembic upgrade head &&
-             uvicorn dipbuyer.api.main:app --host 0.0.0.0 --port 8000
-             --proxy-headers --forwarded-allow-ips='*'"
+    command:
+      - sh
+      - -c
+      - >-
+        python -m alembic upgrade head &&
+        exec python -m uvicorn dipbuyer.api.main:app --host 0.0.0.0 --port 8000
+        --proxy-headers --forwarded-allow-ips=*
     ports:
       - "127.0.0.1:8000:8000"
     healthcheck:

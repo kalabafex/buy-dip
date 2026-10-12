@@ -6,9 +6,14 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
 default:
     @just --list
 
-# docker compose up (db, api, worker, web)
-up:
+# docker compose up (db, api, worker, web), after validating .env
+up: check-env
     docker compose up -d --build
+
+# validate .env (required secrets, quoting, duplicates)
+[working-directory: 'backend']
+check-env:
+    uv run python -m dipbuyer.cli check-env ../.env
 
 down:
     docker compose down
@@ -70,6 +75,11 @@ _gen-types:
 [working-directory: 'backend']
 hash-pw:
     uv run python -m dipbuyer.cli hash-pw
+
+# print a new SESSION_SECRET line
+[working-directory: 'backend']
+gen-secret:
+    uv run python -m dipbuyer.cli gen-secret
 
 # print a new TOTP secret and otpauth URL
 [working-directory: 'backend']

@@ -18,4 +18,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 EXPOSE 8000
 
 # Default command runs the API; docker-compose overrides it for the worker.
-CMD ["sh", "-c", "alembic upgrade head && uvicorn dipbuyer.api.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "python -m alembic upgrade head && exec python -m uvicorn dipbuyer.api.main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=*"]

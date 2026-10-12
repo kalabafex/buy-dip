@@ -21,7 +21,7 @@ cp .env.example .env
 cd backend && uv sync && cd ..
 just hash-pw     # paste the APP_ADMIN_PASSWORD_HASH='...' line into .env (keep the quotes)
 just gen-totp    # set APP_TOTP_SECRET; add the otpauth URL to your authenticator app
-openssl rand -hex 32   # SESSION_SECRET
+just gen-secret  # paste the SESSION_SECRET=... line into .env
 # add your Alpaca *paper* key id and secret
 just up          # builds and starts db, api (runs migrations), worker, web
 ```
