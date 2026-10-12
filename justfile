@@ -1,7 +1,7 @@
-# Dip Buyer developer commands. Requires: docker, uv, node/npm, just.
+# Dip Buyer developer commands. Requires: docker, uv, node/npm, just >= 1.38.
+# Recipes avoid shell-specific syntax so they run under sh (Linux/macOS) and PowerShell (Windows).
 
-backend := "backend"
-frontend := "frontend"
+set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
 
 default:
     @just --list
@@ -17,61 +17,79 @@ logs *ARGS:
     docker compose logs -f {{ARGS}}
 
 # alembic upgrade head (uses DATABASE_URL; inside compose: `docker compose exec api alembic upgrade head`)
+[working-directory: 'backend']
 migrate:
-    cd {{backend}} && uv run alembic upgrade head
+    uv run alembic upgrade head
 
 # backend tests (integration tests use Testcontainers, or TEST_DATABASE_URL if set)
+[working-directory: 'backend']
 test *ARGS:
-    cd {{backend}} && uv run pytest {{ARGS}}
+    uv run pytest {{ARGS}}
 
 # full lint/type/test/build
 check: check-backend check-api check-frontend
 
+[working-directory: 'backend']
 check-backend:
-    cd {{backend}} && uv run ruff format --check src tests
-    cd {{backend}} && uv run ruff check src tests
-    cd {{backend}} && uv run pyright
-    cd {{backend}} && uv run pytest -q
+    uv run ruff format --check src tests
+    uv run ruff check src tests
+    uv run pyright
+    uv run pytest -q
 
-# fail if the committed OpenAPI schema / generated TS types are stale
+# fail if frontend/openapi.json is stale (the frontend build checks schema.d.ts against it)
+[working-directory: 'backend']
 check-api:
-    cd {{backend}} && uv run python -m dipbuyer.cli openapi --out /tmp/dipbuyer-openapi.json
-    diff -u {{frontend}}/openapi.json /tmp/dipbuyer-openapi.json || (echo "API types out of date: run 'just gen-api'" && exit 1)
+    uv run python -m dipbuyer.cli openapi --check ../frontend/openapi.json
 
+[working-directory: 'frontend']
 check-frontend:
-    cd {{frontend}} && npm ci --no-audit --no-fund
-    cd {{frontend}} && npm run typecheck
-    cd {{frontend}} && npm run lint
-    cd {{frontend}} && npm run build
+    npm ci --no-audit --no-fund
+    npm run typecheck
+    npm run lint
+    npm run build
 
 # regenerate frontend API types from the backend's OpenAPI schema
-gen-api:
-    cd {{backend}} && uv run python -m dipbuyer.cli openapi --out ../{{frontend}}/openapi.json
-    cd {{frontend}} && npm run gen-api
+gen-api: _export-openapi _gen-types
 
 # same as gen-api, but read the schema from a running backend
-gen-api-live URL="http://localhost:8000":
-    curl -fsS {{URL}}/api/openapi.json | python3 -m json.tool --sort-keys --indent 2 > {{frontend}}/openapi.json
-    cd {{frontend}} && npm run gen-api
+gen-api-live URL="http://localhost:8000": (_fetch-openapi URL) _gen-types
+
+[working-directory: 'backend']
+_export-openapi:
+    uv run python -m dipbuyer.cli openapi --out ../frontend/openapi.json
+
+[working-directory: 'backend']
+_fetch-openapi URL:
+    uv run python -m dipbuyer.cli openapi --from-url {{URL}} --out ../frontend/openapi.json
+
+[working-directory: 'frontend']
+_gen-types:
+    npm run gen-api
 
 # prompt for a password and print its argon2 hash
+[working-directory: 'backend']
 hash-pw:
-    cd {{backend}} && uv run python -m dipbuyer.cli hash-pw
+    uv run python -m dipbuyer.cli hash-pw
 
 # print a new TOTP secret and otpauth URL
+[working-directory: 'backend']
 gen-totp:
-    cd {{backend}} && uv run python -m dipbuyer.cli gen-totp
+    uv run python -m dipbuyer.cli gen-totp
 
 # CLI backtest with default rule params, e.g. `just backtest LITE 2022-01-01 2025-12-31`
+[working-directory: 'backend']
 backtest SYMBOL START END *ARGS:
-    cd {{backend}} && uv run python -m dipbuyer.cli backtest {{SYMBOL}} {{START}} {{END}} {{ARGS}}
+    uv run python -m dipbuyer.cli backtest {{SYMBOL}} {{START}} {{END}} {{ARGS}}
 
 # run the API and worker locally against DATABASE_URL (no Docker)
+[working-directory: 'backend']
 dev-api:
-    cd {{backend}} && uv run uvicorn dipbuyer.api.main:app --reload --port 8000
+    uv run uvicorn dipbuyer.api.main:app --reload --port 8000
 
+[working-directory: 'backend']
 dev-worker:
-    cd {{backend}} && uv run python -m dipbuyer.worker
+    uv run python -m dipbuyer.worker
 
+[working-directory: 'frontend']
 dev-web:
-    cd {{frontend}} && npm run dev
+    npm run dev

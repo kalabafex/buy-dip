@@ -33,7 +33,16 @@ pytestmark = pytest.mark.integration
 
 
 def _docker_available() -> bool:
-    return shutil.which("docker") is not None and os.path.exists("/var/run/docker.sock")
+    """True if a Docker daemon answers (Unix socket, Windows named pipe or DOCKER_HOST)."""
+    if shutil.which("docker") is None:
+        return False
+    try:
+        import docker  # installed with testcontainers
+
+        docker.from_env().ping()
+    except Exception:
+        return False
+    return True
 
 
 @pytest.fixture(scope="session")

@@ -103,10 +103,30 @@ def cmd_backtest(args: argparse.Namespace) -> int:
     return 0
 
 
+def _openapi_text(doc: object) -> str:
+    return json.dumps(doc, indent=2, sort_keys=True) + "\n"
+
+
 def cmd_openapi(args: argparse.Namespace) -> int:
     from dipbuyer.api.openapi import export_openapi  # noqa: PLC0415
 
-    Path(args.out).write_text(json.dumps(export_openapi(), indent=2, sort_keys=True) + "\n")
+    if args.from_url:
+        import urllib.request  # noqa: PLC0415
+
+        url = args.from_url.rstrip("/") + "/api/openapi.json"
+        with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310 - dev tool
+            doc = json.loads(resp.read())
+    else:
+        doc = export_openapi()
+    if args.check:
+        # Compare parsed JSON so line endings (e.g. Git autocrlf on Windows) don't matter.
+        committed = json.loads(Path(args.check).read_text(encoding="utf-8"))
+        if committed != json.loads(json.dumps(doc)):
+            _out(f"{args.check} is out of date: run 'just gen-api'")
+            return 1
+        _out(f"{args.check} is up to date")
+        return 0
+    Path(args.out).write_text(_openapi_text(doc), encoding="utf-8", newline="\n")
     return 0
 
 
@@ -127,6 +147,8 @@ def main(argv: list[str] | None = None) -> int:
     b.set_defaults(fn=cmd_backtest)
     o = sub.add_parser("openapi")
     o.add_argument("--out", default="openapi.json")
+    o.add_argument("--check", metavar="PATH", help="exit 1 if PATH differs from the schema")
+    o.add_argument("--from-url", metavar="URL", help="read the schema from a running backend")
     o.set_defaults(fn=cmd_openapi)
     args = p.parse_args(argv)
     return int(args.fn(args))

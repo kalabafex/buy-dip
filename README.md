@@ -123,3 +123,9 @@ the symbol's cache so it is refetched:
 
 Buys only. There is no selling or exit automation, and no options, shorting, margin,
 crypto, multiple users or accounts, intraday-bar strategies, or public signup.
+
+## Windows
+
+The justfile runs recipes with PowerShell on Windows (`just` ≥ 1.38). Docker Desktop must be
+running for `just up` and for the integration tests. `.gitattributes` keeps LF line endings
+in the checkout, so formatting checks behave the same on every OS.
