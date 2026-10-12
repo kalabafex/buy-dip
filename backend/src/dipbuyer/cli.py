@@ -189,6 +189,32 @@ def cmd_init_env(args: argparse.Namespace) -> int:
     return 0 if report.ok else 1
 
 
+def cmd_seed_rules(args: argparse.Namespace) -> int:
+    """Insert the preset rules (disabled). Skips presets whose symbol already has a rule."""
+    import uuid  # noqa: PLC0415
+
+    from dipbuyer.config import get_settings  # noqa: PLC0415
+    from dipbuyer.persistence import repo  # noqa: PLC0415
+    from dipbuyer.persistence.db import get_engine, make_session_factory  # noqa: PLC0415
+    from dipbuyer.persistence.models import RuleRow  # noqa: PLC0415
+    from dipbuyer.presets import PRESETS  # noqa: PLC0415
+
+    sf = make_session_factory(get_engine(args.database_url or get_settings().database_url))
+    with sf.begin() as s:
+        existing = {r.symbol for r in repo.list_rules(s)}
+        for preset in PRESETS:
+            params = preset.model_copy(update={"enabled": False})
+            if params.symbol in existing and not args.force:
+                _out(f"skip {params.symbol}: a rule for it already exists (use --force to add)")
+                continue
+            row = RuleRow(id=uuid.uuid4())
+            repo.apply_params(row, params)
+            s.add(row)
+            tiers = ", ".join(f"-{t.drop_pct}%/${t.amount_usd}" for t in params.tiers)
+            _out(f"added {params.symbol} ({params.trigger_type.value}; {tiers}) - disabled")
+    return 0
+
+
 def cmd_check_env(args: argparse.Namespace) -> int:
     from dipbuyer.envcheck import check_env_file  # noqa: PLC0415
 
@@ -224,6 +250,10 @@ def main(argv: list[str] | None = None) -> int:
     o.add_argument("--from-url", metavar="URL", help="read the schema from a running backend")
     o.set_defaults(fn=cmd_openapi)
     sub.add_parser("gen-secret").set_defaults(fn=cmd_gen_secret)
+    sr = sub.add_parser("seed-rules")
+    sr.add_argument("--force", action="store_true", help="add even if the symbol has a rule")
+    sr.add_argument("--database-url", default=None)
+    sr.set_defaults(fn=cmd_seed_rules)
     ie = sub.add_parser("init-env")
     ie.add_argument("path", nargs="?", default="../.env")
     ie.add_argument("--example", default="../.env.example")

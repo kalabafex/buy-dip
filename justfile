@@ -15,6 +15,10 @@ up: check-env
 init-env:
     uv run python -m dipbuyer.cli init-env ../.env
 
+# add the preset dip-buying rules (disabled) to the running stack's database
+seed-rules *ARGS:
+    docker compose exec api python -m dipbuyer.cli seed-rules {{ARGS}}
+
 # validate .env (required secrets, quoting, duplicates)
 [working-directory: 'backend']
 check-env:
