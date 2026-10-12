@@ -29,7 +29,9 @@ just up          # builds and starts db, api (runs migrations), worker, web
 Open <http://localhost:8080> and log in with username, password and TOTP code.
 `http://localhost:8000/api/health` should report `"db": true`.
 
-For remote access, put port 8080 behind Tailscale or Cloudflare Access. Both ports bind
+For remote access, put port 8080 behind Tailscale or Cloudflare Access **over HTTPS**
+(Cloudflare Access, or `tailscale serve` with HTTPS). The session cookie is `Secure`,
+and browsers only make an exception for `http://localhost`. Both ports bind
 to 127.0.0.1 only. The app still enforces its own login.
 
 ### Environment variables

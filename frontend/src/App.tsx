@@ -1,0 +1,33 @@
+import { Navigate, Route, Routes } from "react-router-dom";
+import { ElevationProvider } from "@/components/auth/ElevationProvider";
+import { RequireAuth } from "@/components/auth/RequireAuth";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { BacktestPage } from "@/pages/Backtest";
+import { DashboardPage } from "@/pages/Dashboard";
+import { LoginPage } from "@/pages/Login";
+import { RuleDetailPage } from "@/pages/RuleDetail";
+import { RuleEditPage } from "@/pages/RuleEdit";
+import { RulesPage } from "@/pages/Rules";
+import { SettingsPage } from "@/pages/Settings";
+
+export function App() {
+  return (
+    <ElevationProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<RequireAuth />}>
+          <Route element={<AppLayout />}>
+            <Route index element={<DashboardPage />} />
+            <Route path="rules" element={<RulesPage />} />
+            <Route path="rules/new" element={<RuleEditPage />} />
+            <Route path="rules/:id" element={<RuleDetailPage />} />
+            <Route path="rules/:id/edit" element={<RuleEditPage />} />
+            <Route path="backtest" element={<BacktestPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ElevationProvider>
+  );
+}
