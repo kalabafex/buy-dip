@@ -17,13 +17,10 @@ Requirements: Docker (with compose), [`uv`](https://docs.astral.sh/uv/), Node 22
 [`just`](https://github.com/casey/just) (`uv tool install rust-just` works).
 
 ```sh
-cp .env.example .env
 cd backend && uv sync && cd ..
-just hash-pw     # paste the APP_ADMIN_PASSWORD_HASH='...' line into .env (keep the quotes)
-just gen-totp    # set APP_TOTP_SECRET; add the otpauth URL to your authenticator app
-just gen-secret  # paste the SESSION_SECRET=... line into .env
-# add your Alpaca *paper* key id and secret
-just up          # builds and starts db, api (runs migrations), worker, web
+just init-env    # creates .env; generates SESSION_SECRET and the TOTP secret, asks for a password
+# add the printed setup key to your authenticator app, and your Alpaca *paper* keys to .env
+just up          # validates .env, then builds and starts db, api (runs migrations), worker, web
 ```
 
 Open <http://localhost:8080> and log in with username, password and TOTP code.

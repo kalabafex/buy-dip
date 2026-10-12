@@ -10,6 +10,11 @@ default:
 up: check-env
     docker compose up -d --build
 
+# create .env from .env.example if needed and fill in the session secret, TOTP secret and password hash
+[working-directory: 'backend']
+init-env:
+    uv run python -m dipbuyer.cli init-env ../.env
+
 # validate .env (required secrets, quoting, duplicates)
 [working-directory: 'backend']
 check-env:

@@ -97,3 +97,35 @@ def check_env_file(path: Path) -> EnvReport:
     if "@db:" not in values.get("DATABASE_URL", "@db:"):
         report.warnings.append("DATABASE_URL does not point at the compose 'db' service")
     return report
+
+
+GENERATED_KEYS = ("SESSION_SECRET", "APP_TOTP_SECRET", "APP_ADMIN_PASSWORD_HASH")
+
+
+def _quote_if_needed(key: str, value: str) -> str:
+    return f"'{value}'" if key == "APP_ADMIN_PASSWORD_HASH" else value
+
+
+def fill_env_text(text: str, values: dict[str, str]) -> str:
+    """Set ``values`` in a .env text: the first assignment of each key is replaced, later
+    duplicates are dropped, and missing keys are appended. Other lines are untouched."""
+    seen: set[str] = set()
+    out: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        key = stripped.partition("=")[0].removeprefix("export ").strip()
+        if not stripped.startswith("#") and "=" in stripped and key in values:
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(f"{key}={_quote_if_needed(key, values[key])}")
+        else:
+            out.append(line)
+    out.extend(f"{k}={_quote_if_needed(k, v)}" for k, v in values.items() if k not in seen)
+    return "\n".join(out) + "\n"
+
+
+def existing_values(path: Path) -> dict[str, str]:
+    if not path.exists():
+        return {}
+    return {k: (v or "") for k, v in dotenv_values(path).items()}

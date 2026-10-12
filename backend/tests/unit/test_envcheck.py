@@ -59,3 +59,36 @@ def test_crlf_and_bom(tmp_path: Path) -> None:
     p = tmp_path / ".env"
     p.write_bytes(b"\xef\xbb\xbf" + GOOD.replace("\n", "\r\n").encode())
     assert check_env_file(p).ok
+
+
+def test_fill_env_text_replaces_first_drops_duplicates_appends_missing() -> None:
+    from dipbuyer.envcheck import fill_env_text
+
+    text = "# comment\nSESSION_SECRET=\nA=1\nSESSION_SECRET=\n"
+    out = fill_env_text(
+        text, {"SESSION_SECRET": "s" * 40, "APP_ADMIN_PASSWORD_HASH": "$argon2id$x"}
+    )
+    assert out == (
+        f"# comment\nSESSION_SECRET={'s' * 40}\nA=1\nAPP_ADMIN_PASSWORD_HASH='$argon2id$x'\n"
+    )
+
+
+def test_init_env_creates_and_fills(tmp_path: Path, monkeypatch: object) -> None:
+    import getpass
+
+    import pytest
+
+    from dipbuyer import cli
+
+    mp: pytest.MonkeyPatch = monkeypatch  # type: ignore[assignment]
+    mp.setattr(getpass, "getpass", lambda _prompt="": "a-long-password-123")
+    example = tmp_path / ".env.example"
+    example.write_text(Path(__file__).parents[3].joinpath(".env.example").read_text())
+    env = tmp_path / ".env"
+    assert cli.main(["init-env", str(env), "--example", str(example)]) == 0
+    r = check_env_file(env)
+    assert r.ok
+    first = env.read_text()
+    # running again changes nothing
+    assert cli.main(["init-env", str(env), "--example", str(example)]) == 0
+    assert env.read_text() == first

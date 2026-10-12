@@ -137,6 +137,58 @@ def cmd_gen_secret(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_init_env(args: argparse.Namespace) -> int:
+    """Create/complete .env: fill SESSION_SECRET, APP_TOTP_SECRET and the password hash."""
+    import secrets  # noqa: PLC0415
+
+    from dipbuyer.envcheck import check_env_file, existing_values, fill_env_text  # noqa: PLC0415
+
+    path, example = Path(args.path), Path(args.example)
+    if not path.exists():
+        if not example.exists():
+            _out(f"{example} not found")
+            return 1
+        path.write_text(example.read_text(encoding="utf-8-sig"), encoding="utf-8", newline="\n")
+        _out(f"created {path} from {example}")
+    current = existing_values(path)
+    updates: dict[str, str] = {}
+    if len(current.get("SESSION_SECRET", "")) < 32:
+        updates["SESSION_SECRET"] = secrets.token_hex(32)
+    totp_secret = current.get("APP_TOTP_SECRET", "")
+    if not totp_secret:
+        totp_secret = updates["APP_TOTP_SECRET"] = pyotp.random_base32()
+    if not current.get("APP_ADMIN_PASSWORD_HASH", "").startswith("$argon2"):
+        _out("Choose the dashboard login password (at least 12 characters).")
+        pw = getpass.getpass("Password: ")
+        if pw != getpass.getpass("Repeat: "):
+            _out("passwords do not match; nothing written")
+            return 1
+        if len(pw) < 12:
+            _out("use at least 12 characters; nothing written")
+            return 1
+        updates["APP_ADMIN_PASSWORD_HASH"] = hash_password(pw)
+    if updates:
+        text = path.read_text(encoding="utf-8-sig")
+        path.write_text(fill_env_text(text, updates), encoding="utf-8", newline="\n")
+        _out(f"wrote {', '.join(updates)} to {path}")
+    else:
+        _out("nothing to fill in")
+    if "APP_TOTP_SECRET" in updates:
+        user = current.get("APP_ADMIN_USERNAME") or "admin"
+        uri = pyotp.TOTP(totp_secret).provisioning_uri(name=user, issuer_name="Dip Buyer")
+        _out("")
+        _out("Add this account to your authenticator app (Google Authenticator, Authy, ...):")
+        _out(f"  setup key (enter manually, time-based): {totp_secret}")
+        _out(f"  or otpauth URL: {uri}")
+    _out("")
+    report = check_env_file(path)
+    for w in report.warnings:
+        _out(f"warning: {w}")
+    for e in report.errors:
+        _out(f"error: {e}")
+    return 0 if report.ok else 1
+
+
 def cmd_check_env(args: argparse.Namespace) -> int:
     from dipbuyer.envcheck import check_env_file  # noqa: PLC0415
 
@@ -172,6 +224,10 @@ def main(argv: list[str] | None = None) -> int:
     o.add_argument("--from-url", metavar="URL", help="read the schema from a running backend")
     o.set_defaults(fn=cmd_openapi)
     sub.add_parser("gen-secret").set_defaults(fn=cmd_gen_secret)
+    ie = sub.add_parser("init-env")
+    ie.add_argument("path", nargs="?", default="../.env")
+    ie.add_argument("--example", default="../.env.example")
+    ie.set_defaults(fn=cmd_init_env)
     ce = sub.add_parser("check-env")
     ce.add_argument("path", nargs="?", default="../.env")
     ce.set_defaults(fn=cmd_check_env)
