@@ -128,4 +128,8 @@ crypto, multiple users or accounts, intraday-bar strategies, or public signup.
 
 The justfile runs recipes with PowerShell on Windows (`just` ≥ 1.38). Docker Desktop must be
 running for `just up` and for the integration tests. `.gitattributes` keeps LF line endings
-in the checkout, so formatting checks behave the same on every OS.
+in the checkout, so formatting checks behave the same on every OS. Recipes call Python tools
+as `python -m <tool>` rather than through the `.exe` launchers in `.venv\Scripts`, which
+Windows Smart App Control / App Control policies may block ("An Application Control policy
+has blocked this file"). Do the same when running a tool by hand, e.g.
+`uv run python -m pytest`.

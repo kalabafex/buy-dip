@@ -19,22 +19,22 @@ logs *ARGS:
 # alembic upgrade head (uses DATABASE_URL; inside compose: `docker compose exec api alembic upgrade head`)
 [working-directory: 'backend']
 migrate:
-    uv run alembic upgrade head
+    uv run python -m alembic upgrade head
 
 # backend tests (integration tests use Testcontainers, or TEST_DATABASE_URL if set)
 [working-directory: 'backend']
 test *ARGS:
-    uv run pytest {{ARGS}}
+    uv run python -m pytest {{ARGS}}
 
 # full lint/type/test/build
 check: check-backend check-api check-frontend
 
 [working-directory: 'backend']
 check-backend:
-    uv run ruff format --check src tests
-    uv run ruff check src tests
-    uv run pyright
-    uv run pytest -q
+    uv run python -m ruff format --check src tests
+    uv run python -m ruff check src tests
+    uv run python -m pyright
+    uv run python -m pytest -q
 
 # fail if frontend/openapi.json is stale (the frontend build checks schema.d.ts against it)
 [working-directory: 'backend']
@@ -84,7 +84,7 @@ backtest SYMBOL START END *ARGS:
 # run the API and worker locally against DATABASE_URL (no Docker)
 [working-directory: 'backend']
 dev-api:
-    uv run uvicorn dipbuyer.api.main:app --reload --port 8000
+    uv run python -m uvicorn dipbuyer.api.main:app --reload --port 8000
 
 [working-directory: 'backend']
 dev-worker:
