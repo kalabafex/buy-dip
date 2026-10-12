@@ -1,0 +1,87 @@
+from __future__ import annotations
+
+from enum import StrEnum
+
+
+class TriggerType(StrEnum):
+    PULLBACK_FROM_HIGH = "PULLBACK_FROM_HIGH"
+    RSI_OVERSOLD = "RSI_OVERSOLD"
+    BELOW_MA = "BELOW_MA"
+
+
+class TrendFilter(StrEnum):
+    NONE = "NONE"
+    ABOVE_200DMA = "ABOVE_200DMA"
+
+
+class TradingMode(StrEnum):
+    PAPER = "PAPER"
+    LIVE = "LIVE"
+
+
+class Decision(StrEnum):
+    ORDER = "ORDER"
+    NO_TRIGGER = "NO_TRIGGER"
+    SKIP_KILL_SWITCH = "SKIP_KILL_SWITCH"
+    SKIP_MARKET_CLOSED = "SKIP_MARKET_CLOSED"
+    SKIP_EXCLUSION_WINDOW = "SKIP_EXCLUSION_WINDOW"
+    SKIP_STALE_DATA = "SKIP_STALE_DATA"
+    SKIP_PRICE_SANITY = "SKIP_PRICE_SANITY"
+    SKIP_TREND_FILTER = "SKIP_TREND_FILTER"
+    SKIP_OPEN_ORDER = "SKIP_OPEN_ORDER"
+    SKIP_TIER_FILLED = "SKIP_TIER_FILLED"
+    SKIP_COOLDOWN = "SKIP_COOLDOWN"
+    SKIP_DAILY_CAP = "SKIP_DAILY_CAP"
+    SKIP_WEEKLY_CAP = "SKIP_WEEKLY_CAP"
+    SKIP_POSITION_CAP = "SKIP_POSITION_CAP"
+    SKIP_BUYING_POWER = "SKIP_BUYING_POWER"
+    SKIP_MODE_MISMATCH = "SKIP_MODE_MISMATCH"
+    SKIP_QTY_ZERO = "SKIP_QTY_ZERO"
+    SKIP_DRY_RUN = "SKIP_DRY_RUN"
+    SKIP_NO_DATA = "SKIP_NO_DATA"
+
+
+class CycleState(StrEnum):
+    ACTIVE = "ACTIVE"
+    CLOSED = "CLOSED"
+
+
+class CycleEndReason(StrEnum):
+    RECOVERED = "RECOVERED"
+    COOLDOWN_EXPIRED = "COOLDOWN_EXPIRED"
+    MANUAL = "MANUAL"
+
+
+class CycleAction(StrEnum):
+    NONE = "NONE"
+    OPEN = "OPEN"
+    CLOSE = "CLOSE"
+
+
+class OrderStatus(StrEnum):
+    PENDING = "PENDING"
+    SUBMITTED = "SUBMITTED"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+    CANCELED = "CANCELED"
+    EXPIRED = "EXPIRED"
+    REJECTED = "REJECTED"
+    FAILED = "FAILED"
+
+
+OPEN_ORDER_STATUSES: frozenset[OrderStatus] = frozenset(
+    {OrderStatus.PENDING, OrderStatus.SUBMITTED, OrderStatus.PARTIALLY_FILLED}
+)
+SPEND_STATUSES: frozenset[OrderStatus] = frozenset(
+    {OrderStatus.SUBMITTED, OrderStatus.PARTIALLY_FILLED, OrderStatus.FILLED}
+)
+TERMINAL_UNFILLED_STATUSES: frozenset[OrderStatus] = frozenset(
+    {OrderStatus.CANCELED, OrderStatus.EXPIRED, OrderStatus.REJECTED, OrderStatus.FAILED}
+)
+
+
+class BacktestStatus(StrEnum):
+    QUEUED = "QUEUED"
+    RUNNING = "RUNNING"
+    DONE = "DONE"
+    FAILED = "FAILED"

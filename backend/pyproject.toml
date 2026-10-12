@@ -1,0 +1,73 @@
+[project]
+name = "dipbuyer"
+version = "0.1.0"
+description = "Personal rules-based buy-the-dip trading system"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.0",
+    "alpaca-py>=0.44.0",
+    "apscheduler>=3.11.3",
+    "argon2-cffi>=25.1.0",
+    "fastapi>=0.143.0",
+    "httpx>=0.28.1",
+    "itsdangerous>=2.2.0",
+    "numpy>=2.5.4",
+    "pandas>=3.0.6",
+    "pandas-market-calendars>=5.5.0",
+    "psycopg[binary]>=3.3.6",
+    "pydantic-settings>=2.15.0",
+    "pyotp>=2.10.0",
+    "python-json-logger>=4.2.0",
+    "sqlalchemy>=2",
+    "sse-starlette>=3.5.0",
+    "tzdata>=2026.5",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.11.32,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.169.0",
+    "pandas-stubs>=3.0.5.260914",
+    "pyright>=1.1.414",
+    "pytest>=9.1.1",
+    "responses>=0.26.3",
+    "respx>=0.23.1",
+    "ruff>=0.17.0",
+    "testcontainers[postgres]>=4.15.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "N", "S", "DTZ", "PL", "T20"]
+ignore = ["PLR0917", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR2004", "RUF001"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["N817", "PLC0415", "SIM905", "S101", "S105", "S106", "PLR2004", "DTZ001", "DTZ005"]
+"migrations/**" = ["E501"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.12"
+typeCheckingMode = "standard"
+strict = [
+    "src/dipbuyer/domain",
+    "src/dipbuyer/indicators",
+    "src/dipbuyer/engine",
+    "src/dipbuyer/risk",
+    "src/dipbuyer/broker",
+]
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["integration: requires Docker/Postgres"]
