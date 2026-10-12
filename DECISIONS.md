@@ -4,9 +4,9 @@ Choices made where the spec was silent or ambiguous, and every deviation from it
 
 ## Repository and tooling
 
-1. **Location.** This repository already held an Angular demo app (`list-detail`). Dip Buyer
-   lives in the `dip-buyer/` subdirectory, laid out exactly as spec §3. The Angular app is
-   untouched.
+1. **Location.** This repository is the spec's `dip-buyer/` root, laid out exactly as spec §3.
+   It was first developed in `kalabafex/list-detail` (under `dip-buyer/`) and moved here
+   with its history.
 2. **Python.** `requires-python >= 3.12`. The Docker image uses 3.12; development and tests
    ran on 3.13.
 3. **`justfile`**, not a Makefile. Extra recipes: `down`, `logs`, `check-backend`,
