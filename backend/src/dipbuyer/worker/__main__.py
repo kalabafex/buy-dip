@@ -100,6 +100,8 @@ def main() -> None:
 
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
+    if not all(env.alpaca_keys(TradingMode.PAPER)):
+        log.warning("ALPACA_PAPER_KEY_ID/SECRET not set: market-hours ticks will fail")
     log.info("worker started", extra={"dry_run": env.dry_run})
     sched.start()
 
