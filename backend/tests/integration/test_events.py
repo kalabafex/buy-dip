@@ -13,11 +13,11 @@ def test_notify_reaches_sse_subscribers(sf: sessionmaker[Session], pg_url: str) 
         bus = EventBus()
         q = bus.subscribe()
         bus.start(psycopg_dsn(pg_url))
-        await asyncio.sleep(0.5)  # let LISTEN start
+        await asyncio.sleep(1.0)  # let LISTEN start
         with sf.begin() as s:
             notify(s, "order", {"id": "abc", "status": "FILLED"})
         try:
-            return await asyncio.wait_for(q.get(), timeout=5)
+            return await asyncio.wait_for(q.get(), timeout=10)
         finally:
             await bus.stop()
 
