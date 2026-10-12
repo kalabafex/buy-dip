@@ -24,6 +24,8 @@ just up          # validates .env, then builds and starts db, api (runs migratio
 ```
 
 Open <http://localhost:8080> and log in with username, password and TOTP code.
+The app starts with no rules. `just seed-rules` adds three researched presets (SPY, QQQ,
+VOO), all disabled; see [docs/rule-research.md](docs/rule-research.md).
 `http://localhost:8000/api/health` should report `"db": true`.
 
 For remote access, put port 8080 behind Tailscale or Cloudflare Access **over HTTPS**
