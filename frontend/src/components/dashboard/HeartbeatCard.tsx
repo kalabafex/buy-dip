@@ -1,43 +1,52 @@
+import { Activity } from "lucide-react";
 import type { Schemas } from "@/api/client";
 import { StatCard } from "@/components/dashboard/StatCard";
-import { ageMs, fmtDateTime, fmtRelative } from "@/lib/format";
+import { fmtDateTime, fmtRelative } from "@/lib/format";
+import { workerHealth } from "@/lib/health";
 import { useNow } from "@/lib/hooks";
+import { cn } from "@/lib/utils";
 
-/** Worker heartbeat age above this is flagged (spec: ~2× the evaluation interval). */
-const STALE_MS = 15 * 60_000;
+const LABEL = { ok: "Running", stale: "Stale", down: "Unreachable", unknown: "—" } as const;
+const TONE = {
+  ok: "bg-gain",
+  stale: "bg-warning",
+  down: "bg-loss",
+  unknown: "bg-muted-foreground/50",
+} as const;
 
 export function HeartbeatCard({
   health,
   error,
+  intervalMinutes,
   className,
 }: {
   health: Schemas["HealthOut"] | undefined;
   error: unknown;
+  intervalMinutes: number | undefined;
   className?: string;
 }) {
   const now = useNow(15_000);
-  const age = ageMs(health?.last_heartbeat_at, now);
-  const stale = age === null || age > STALE_MS;
-  const degraded = !!error || health?.status === "degraded";
-  const warn = degraded || (health !== undefined && stale);
-
+  const w = workerHealth(health, error, intervalMinutes, now);
   return (
     <StatCard
       className={className}
-      title="Worker heartbeat"
+      title="Worker"
+      icon={Activity}
+      loading={!health && !error}
       value={
-        error ? "API unreachable" : health ? fmtRelative(health.last_heartbeat_at, now) : "—"
+        <span className="flex items-center gap-2">
+          <span aria-hidden className={cn("h-2 w-2 shrink-0 rounded-full", TONE[w.state])} />
+          {LABEL[w.state]}
+        </span>
       }
-      valueClassName={warn ? "text-amber-600 dark:text-amber-400" : undefined}
+      valueClassName={w.state === "down" ? "text-loss" : w.state === "stale" ? "text-warning" : undefined}
       sub={
-        health
-          ? `${degraded ? "Degraded (DB down) · " : ""}last tick ${fmtRelative(health.last_tick_at, now)}`
-          : undefined
+        <span title={health?.last_heartbeat_at ? fmtDateTime(health.last_heartbeat_at) : undefined}>
+          {health
+            ? `Ticked ${fmtRelative(health.last_tick_at, now)} · market heartbeat ${fmtRelative(health.last_heartbeat_at, now)}`
+            : w.text}
+        </span>
       }
-    >
-      {health?.last_heartbeat_at && (
-        <span className="sr-only">{fmtDateTime(health.last_heartbeat_at)}</span>
-      )}
-    </StatCard>
+    />
   );
 }

@@ -16,6 +16,8 @@ export const qk = {
   evaluations: (q: EvaluationsQuery) => ["evaluations", q] as const,
   backtests: ["backtests"] as const,
   backtest: (id: string) => ["backtests", id] as const,
+  recommendations: ["recommendations"] as const,
+  recommendation: (id: string) => ["recommendations", id] as const,
 };
 
 export type OrdersQuery = QueryOf<"/api/orders", "get">;
@@ -91,8 +93,7 @@ export function useRule(id: string | undefined) {
 export function useRulePreview(id: string | undefined) {
   return useQuery({
     queryKey: qk.rulePreview(id ?? ""),
-    queryFn: ({ signal }) =>
-      api.get("/api/rules/{rule_id}/preview", { path: { rule_id: id! }, signal }),
+    queryFn: ({ signal }) => api.get("/api/rules/{rule_id}/preview", { path: { rule_id: id! }, signal }),
     enabled: !!id,
     staleTime: 60_000,
   });
@@ -141,9 +142,34 @@ const FINISHED: Schemas["BacktestStatus"][] = ["DONE", "FAILED"];
 export function useBacktest(id: string | null) {
   return useQuery({
     queryKey: qk.backtest(id ?? ""),
-    queryFn: ({ signal }) =>
-      api.get("/api/backtests/{backtest_id}", { path: { backtest_id: id! }, signal }),
+    queryFn: ({ signal }) => api.get("/api/backtests/{backtest_id}", { path: { backtest_id: id! }, signal }),
     enabled: !!id,
+    refetchInterval: (query) => {
+      const s = query.state.data?.status;
+      return s && FINISHED.includes(s) ? false : 2_000;
+    },
+  });
+}
+
+export function useRecommendations() {
+  return useQuery({
+    queryKey: qk.recommendations,
+    queryFn: ({ signal }) => api.get("/api/recommendations", { signal }),
+    // Fallback while any run is in flight (SSE also invalidates this list).
+    refetchInterval: (query) => (query.state.data?.some((r) => !FINISHED.includes(r.status)) ? 5_000 : false),
+  });
+}
+
+/** One run; polled every 2 s while QUEUED/RUNNING as a fallback to SSE progress events. */
+export function useRecommendation(id: string | null) {
+  return useQuery({
+    queryKey: qk.recommendation(id ?? ""),
+    queryFn: ({ signal }) => api.get("/api/recommendations/{rec_id}", { path: { rec_id: id! }, signal }),
+    enabled: !!id,
+    staleTime: (query) => {
+      const s = query.state.data?.status;
+      return s && FINISHED.includes(s) ? 5 * 60_000 : 0;
+    },
     refetchInterval: (query) => {
       const s = query.state.data?.status;
       return s && FINISHED.includes(s) ? false : 2_000;

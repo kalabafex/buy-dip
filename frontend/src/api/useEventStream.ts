@@ -1,4 +1,4 @@
-import { useQueryClient, type QueryKey } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { qk } from "./queries";
 
@@ -9,8 +9,24 @@ const INVALIDATES: Record<string, QueryKey[]> = {
   evaluation: [["evaluations"], qk.rules],
   order: [["orders"], qk.account, qk.positions, qk.settings, qk.rules],
   settings: [qk.settings, qk.rules],
-  backtest: [qk.backtests],
 };
+
+/** Events that carry `{id, ...}` of a job: refresh that job and the list. */
+function onJobEvent(qc: QueryClient, name: "recommendation" | "backtest", data: string) {
+  let id: string | undefined;
+  try {
+    const parsed = JSON.parse(data) as { id?: unknown };
+    id = typeof parsed.id === "string" ? parsed.id : undefined;
+  } catch {
+    /* ignore */
+  }
+  const list = name === "recommendation" ? qk.recommendations : qk.backtests;
+  void qc.invalidateQueries({ queryKey: list, exact: !!id });
+  if (id)
+    void qc.invalidateQueries({
+      queryKey: name === "recommendation" ? qk.recommendation(id) : qk.backtest(id),
+    });
+}
 
 const MAX_BACKOFF_MS = 30_000;
 
@@ -46,6 +62,10 @@ export function useEventStream(enabled: boolean): StreamState {
           for (const queryKey of keys) void qc.invalidateQueries({ queryKey });
         });
       }
+      es.addEventListener("backtest", (e) => onJobEvent(qc, "backtest", (e as MessageEvent<string>).data));
+      es.addEventListener("recommendation", (e) =>
+        onJobEvent(qc, "recommendation", (e as MessageEvent<string>).data),
+      );
       es.onerror = () => {
         es?.close();
         es = null;

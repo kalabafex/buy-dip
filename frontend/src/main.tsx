@@ -5,6 +5,8 @@ import { BrowserRouter } from "react-router-dom";
 import { ApiError, setUnauthorizedHandler } from "@/api/client";
 import { qk } from "@/api/queries";
 import { App } from "@/App";
+import { Toaster } from "@/components/ui/toaster";
+import "@fontsource-variable/inter/wght.css";
 import "./index.css";
 
 const queryClient = new QueryClient({
@@ -37,6 +39,7 @@ createRoot(root).render(
       <BrowserRouter>
         <App />
       </BrowserRouter>
+      <Toaster />
     </QueryClientProvider>
   </StrictMode>,
 );

@@ -1,5 +1,6 @@
+import { Briefcase } from "lucide-react";
 import type { Schemas } from "@/api/client";
-import { Signed } from "@/components/common";
+import { EmptyState, Signed } from "@/components/common";
 import {
   Table,
   TableBody,
@@ -9,7 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fmtNum, fmtPct, fmtPrice, fmtUsd } from "@/lib/format";
+import { fmtNum, fmtPct, fmtPrice, fmtUsd, fmtUsdSigned } from "@/lib/format";
 
 export function PositionsTable({
   positions,
@@ -18,20 +19,34 @@ export function PositionsTable({
   positions: Schemas["PositionOut"][] | undefined;
   loading?: boolean;
 }) {
+  if (!loading && !positions?.length) {
+    return (
+      <EmptyState
+        icon={Briefcase}
+        title={"No open positions"}
+        description="Positions bought by your rules show up after the next account snapshot."
+        className="py-8"
+      />
+    );
+  }
   return (
     <Table>
       <TableHeader>
-        <TableRow>
+        <TableRow className="hover:bg-transparent">
           <TableHead>Symbol</TableHead>
           <TableHead className="text-right">Qty</TableHead>
-          <TableHead className="text-right">Avg entry</TableHead>
-          <TableHead className="text-right">Market value</TableHead>
-          <TableHead className="text-right">Unrealized P/L</TableHead>
+          <TableHead className="hidden text-right sm:table-cell">Avg entry</TableHead>
+          <TableHead className="text-right">Value</TableHead>
+          <TableHead className="text-right" title="Unrealized profit / loss">
+            P/L
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {!positions?.length ? (
-          <TableEmpty colSpan={5}>{loading ? "Loading…" : "No positions"}</TableEmpty>
+          <TableEmpty colSpan={5} loading={loading}>
+            No open positions.
+          </TableEmpty>
         ) : (
           positions.map((p) => {
             const pl = Number(p.unrealized_pl);
@@ -39,15 +54,15 @@ export function PositionsTable({
             const plPct = cost > 0 ? (pl / cost) * 100 : null;
             return (
               <TableRow key={p.symbol}>
-                <TableCell className="font-medium">{p.symbol}</TableCell>
+                <TableCell className="font-semibold">{p.symbol}</TableCell>
                 <TableCell className="text-right">{fmtNum(p.qty)}</TableCell>
-                <TableCell className="text-right">{fmtPrice(p.avg_entry_price)}</TableCell>
-                <TableCell className="text-right">{fmtUsd(p.market_value)}</TableCell>
+                <TableCell className="hidden text-right sm:table-cell">{fmtPrice(p.avg_entry_price)}</TableCell>
+                <TableCell className="text-right font-medium">{fmtUsd(p.market_value)}</TableCell>
                 <TableCell className="text-right">
-                  <Signed value={pl}>
-                    {fmtUsd(p.unrealized_pl)}
+                  <Signed value={pl} className="font-medium">
+                    {fmtUsdSigned(p.unrealized_pl)}
                     {plPct !== null && (
-                      <span className="ml-1 text-xs">({fmtPct(plPct, 2, true)})</span>
+                      <span className="ml-1.5 text-xs opacity-90">{fmtPct(plPct, 2, true)}</span>
                     )}
                   </Signed>
                 </TableCell>

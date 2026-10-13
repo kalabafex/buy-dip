@@ -5,6 +5,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { BacktestPage } from "@/pages/Backtest";
 import { DashboardPage } from "@/pages/Dashboard";
 import { LoginPage } from "@/pages/Login";
+import { RecommendationsPage } from "@/pages/Recommendations";
 import { RuleDetailPage } from "@/pages/RuleDetail";
 import { RuleEditPage } from "@/pages/RuleEdit";
 import { RulesPage } from "@/pages/Rules";
@@ -22,6 +23,7 @@ export function App() {
             <Route path="rules/new" element={<RuleEditPage />} />
             <Route path="rules/:id" element={<RuleDetailPage />} />
             <Route path="rules/:id/edit" element={<RuleEditPage />} />
+            <Route path="recommendations" element={<RecommendationsPage />} />
             <Route path="backtest" element={<BacktestPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

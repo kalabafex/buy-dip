@@ -7,7 +7,8 @@ import { qk } from "@/api/queries";
 import { ErrorBox, Spinner } from "@/components/common";
 import { FormField } from "@/components/FormField";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AdornedInput } from "@/components/ui/input";
+import { toast } from "@/lib/toast";
 
 const num = () => z.number({ required_error: "Required", invalid_type_error: "Must be a number" });
 const int = (min: number, max: number) =>
@@ -58,8 +59,10 @@ export function SettingsForm({ settings }: { settings: Schemas["SettingsOut"] })
     onSuccess: (s) => {
       qc.setQueryData(qk.settings, s);
       form.reset(toValues(s));
+      toast.success("Settings saved");
     },
     onError: (e) => {
+      toast.error("Could not save settings", e);
       if (isApiError(e, 422)) {
         for (const [path, msg] of Object.entries(e.fieldErrors)) {
           if (path) form.setError(path as FieldPath<Values>, { message: msg });
@@ -71,42 +74,86 @@ export function SettingsForm({ settings }: { settings: Schemas["SettingsOut"] })
 
   return (
     <form className="grid grid-cols-1 gap-4" onSubmit={form.handleSubmit((v) => save.mutate(v))} noValidate>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <FormField id="s-daily" label="Max daily spend (USD)" error={errors.max_daily_spend_usd?.message}>
-          <Input id="s-daily" type="number" step="any" {...form.register("max_daily_spend_usd", numOpts)} />
+      <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
+        <FormField
+          id="s-daily"
+          label="Max daily spend"
+          error={errors.max_daily_spend_usd?.message}
+          hint="All rules combined, per trading day"
+        >
+          <AdornedInput
+            id="s-daily"
+            prefix="$"
+            type="number"
+            step="any"
+            {...form.register("max_daily_spend_usd", numOpts)}
+          />
         </FormField>
-        <FormField id="s-weekly" label="Max weekly spend (USD)" error={errors.max_weekly_spend_usd?.message}>
-          <Input id="s-weekly" type="number" step="any" {...form.register("max_weekly_spend_usd", numOpts)} />
+        <FormField
+          id="s-weekly"
+          label="Max weekly spend"
+          error={errors.max_weekly_spend_usd?.message}
+          hint="All rules combined, per calendar week"
+        >
+          <AdornedInput
+            id="s-weekly"
+            prefix="$"
+            type="number"
+            step="any"
+            {...form.register("max_weekly_spend_usd", numOpts)}
+          />
         </FormField>
         <FormField
           id="s-interval"
-          label="Evaluation interval (minutes)"
+          label="Evaluation interval"
           error={errors.evaluation_interval_minutes?.message}
-          hint="1–60"
+          hint="How often the worker checks enabled rules during market hours (1–60)"
         >
-          <Input id="s-interval" type="number" step={1} {...form.register("evaluation_interval_minutes", numOpts)} />
+          <AdornedInput
+            id="s-interval"
+            suffix="min"
+            type="number"
+            step={1}
+            {...form.register("evaluation_interval_minutes", numOpts)}
+          />
         </FormField>
         <div className="hidden sm:block" />
         <FormField
           id="s-open"
-          label="Skip after market open (minutes)"
+          label="Skip after the open"
           error={errors.open_exclusion_minutes?.message}
-          hint="0–120"
+          hint="No orders in the volatile first minutes of the session (0–120)"
         >
-          <Input id="s-open" type="number" step={1} {...form.register("open_exclusion_minutes", numOpts)} />
+          <AdornedInput
+            id="s-open"
+            suffix="min"
+            type="number"
+            step={1}
+            {...form.register("open_exclusion_minutes", numOpts)}
+          />
         </FormField>
         <FormField
           id="s-close"
-          label="Skip before market close (minutes)"
+          label="Skip before the close"
           error={errors.close_exclusion_minutes?.message}
-          hint="0–120"
+          hint="No orders in the last minutes before the close (0–120)"
         >
-          <Input id="s-close" type="number" step={1} {...form.register("close_exclusion_minutes", numOpts)} />
+          <AdornedInput
+            id="s-close"
+            suffix="min"
+            type="number"
+            step={1}
+            {...form.register("close_exclusion_minutes", numOpts)}
+          />
         </FormField>
       </div>
       <ErrorBox error={save.error} />
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" disabled={!isDirty || save.isPending} onClick={() => form.reset(toValues(settings))}>
+      <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
+        <Button
+          variant="outline"
+          disabled={!isDirty || save.isPending}
+          onClick={() => form.reset(toValues(settings))}
+        >
           Reset
         </Button>
         <Button type="submit" disabled={!isDirty || save.isPending}>

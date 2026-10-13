@@ -2,56 +2,115 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens (HSL channels, consumed as hsl(var(--x) / alpha) by Tailwind).
+ * Light is the default; `.dark` on <html> (set by lib/theme.ts, following the OS
+ * preference unless the user picked a theme) switches to the dark set.
+ */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 9%;
+    color-scheme: light;
+    --background: 240 9% 97.5%;
+    --foreground: 240 10% 8%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
+    --card-foreground: 240 10% 8%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 94%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 85%;
-    --ring: 0 0% 40%;
+    --popover-foreground: 240 10% 8%;
+    --sidebar: 0 0% 100%;
+    --sidebar-foreground: 240 6% 26%;
+    --primary: 213 67% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 94%;
+    --secondary-foreground: 240 6% 12%;
+    --muted: 240 5% 94.5%;
+    --muted-foreground: 240 4% 40%;
+    --accent: 240 5% 93%;
+    --accent-foreground: 240 6% 10%;
+    --destructive: 0 70% 47%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 89%;
+    --input: 240 6% 84%;
+    --ring: 213 67% 50%;
+
+    --gain: 142 76% 27%;
+    --gain-soft: 142 60% 93%;
+    --loss: 0 72% 44%;
+    --loss-soft: 0 85% 95.5%;
+    --warning: 30 92% 36%;
+    --warning-soft: 42 95% 92%;
+    --info: 213 70% 42%;
+    --info-soft: 213 85% 95%;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 0 0% 7%;
-      --foreground: 0 0% 95%;
-      --card: 0 0% 10%;
-      --card-foreground: 0 0% 95%;
-      --popover: 0 0% 10%;
-      --popover-foreground: 0 0% 95%;
-      --primary: 0 0% 95%;
-      --primary-foreground: 0 0% 9%;
-      --secondary: 0 0% 16%;
-      --secondary-foreground: 0 0% 95%;
-      --muted: 0 0% 15%;
-      --muted-foreground: 0 0% 64%;
-      --accent: 0 0% 18%;
-      --accent-foreground: 0 0% 95%;
-      --destructive: 0 63% 45%;
-      --destructive-foreground: 0 0% 98%;
-      --border: 0 0% 20%;
-      --input: 0 0% 24%;
-      --ring: 0 0% 70%;
-    }
+
+  .dark {
+    color-scheme: dark;
+    --background: 240 6% 5.5%;
+    --foreground: 240 5% 94%;
+    --card: 240 5% 8.5%;
+    --card-foreground: 240 5% 94%;
+    --popover: 240 5% 10%;
+    --popover-foreground: 240 5% 94%;
+    --sidebar: 240 5% 7.5%;
+    --sidebar-foreground: 240 5% 75%;
+    --primary: 213 76% 56%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 4% 15%;
+    --secondary-foreground: 240 5% 94%;
+    --muted: 240 4% 13%;
+    --muted-foreground: 240 5% 64%;
+    --accent: 240 4% 15%;
+    --accent-foreground: 240 5% 96%;
+    --destructive: 0 68% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 4% 17%;
+    --input: 240 4% 23%;
+    --ring: 213 76% 60%;
+
+    --gain: 142 62% 52%;
+    --gain-soft: 142 50% 13%;
+    --loss: 0 85% 68%;
+    --loss-soft: 0 55% 15%;
+    --warning: 40 92% 60%;
+    --warning-soft: 38 60% 13%;
+    --info: 213 90% 70%;
+    --info-soft: 213 50% 15%;
   }
+
   * {
     @apply border-border;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-sm text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    @apply bg-primary/20;
+  }
+  :focus-visible {
+    outline: none;
+  }
+}
+
+@layer utilities {
+  /** Money / percent figures: aligned digits. */
+  .num {
+    font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

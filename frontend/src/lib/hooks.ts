@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "@/lib/theme";
 
 export function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -19,17 +20,19 @@ export function useNow(intervalMs = 30_000): number {
   return now;
 }
 
-const DARK_QUERY = "(prefers-color-scheme: dark)";
-
+/** True when the dark theme is active (OS preference or manual choice). */
 export function useDarkMode(): boolean {
-  const [dark, setDark] = useState(
-    () => typeof window !== "undefined" && window.matchMedia(DARK_QUERY).matches,
-  );
+  return useTheme().dark;
+}
+
+export function useMediaQuery(query: string): boolean {
+  const [m, setM] = useState(() => typeof window !== "undefined" && window.matchMedia(query).matches);
   useEffect(() => {
-    const mq = window.matchMedia(DARK_QUERY);
-    const onChange = (e: MediaQueryListEvent) => setDark(e.matches);
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  return dark;
+    const mq = window.matchMedia(query);
+    setM(mq.matches);
+    const on = (e: MediaQueryListEvent) => setM(e.matches);
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, [query]);
+  return m;
 }

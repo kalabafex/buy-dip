@@ -21,6 +21,36 @@ export function fmtUsd(v: Num, opts: { compact?: boolean } = {}): string {
   return opts.compact && Number.isInteger(n) ? usd0.format(n) : usd.format(n);
 }
 
+const usdCompact = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+/** "$12.3K" for large values, full precision below $10,000. */
+export function fmtUsdShort(v: Num): string {
+  const n = toNum(v);
+  if (n === null) return "—";
+  return Math.abs(n) >= 10_000 ? usdCompact.format(n) : usd0.format(n);
+}
+
+/** "+$1,234" / "−$56". */
+export function fmtUsdSigned(v: Num, opts: { short?: boolean } = {}): string {
+  const n = toNum(v);
+  if (n === null) return "—";
+  const a = Math.abs(n);
+  const body = opts.short ? fmtUsdShort(a) : a < 1000 ? usd.format(a) : usd0.format(a);
+  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${body}`;
+}
+
+/** Percentage points: "+3.2 pts". */
+export function fmtPts(v: Num, digits = 1): string {
+  const n = toNum(v);
+  if (n === null) return "—";
+  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(digits)} pts`;
+}
+
 /** Price with up to 4 decimals (sub-dollar prices). */
 export function fmtPrice(v: Num): string {
   const n = toNum(v);
@@ -37,8 +67,8 @@ export function fmtPrice(v: Num): string {
 export function fmtPct(v: Num, digits = 2, signed = false): string {
   const n = toNum(v);
   if (n === null) return "—";
-  const s = n.toFixed(digits);
-  return `${signed && n > 0 ? "+" : ""}${s}%`;
+  const s = Math.abs(n).toFixed(digits);
+  return `${n < 0 ? "−" : signed && n > 0 ? "+" : ""}${s}%`;
 }
 
 export function fmtNum(v: Num, maxDigits = 4): string {
@@ -72,6 +102,24 @@ export function fmtDate(v: string | null | undefined): string {
   return v.slice(0, 10);
 }
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "2016-03-01" -> "Mar 2016" (no timezone conversion). */
+export function fmtMonth(v: string | null | undefined): string {
+  if (!v) return "—";
+  const [y, m] = v.split("-");
+  const name = MONTHS[Number(m) - 1];
+  return name && y ? `${name} ${y}` : v;
+}
+
+/** "2016-03-01" -> "Mar 1, 2016". */
+export function fmtDay(v: string | null | undefined): string {
+  if (!v) return "—";
+  const [y, m, d] = v.slice(0, 10).split("-");
+  const name = MONTHS[Number(m) - 1];
+  return name && y && d ? `${name} ${Number(d)}, ${y}` : v;
+}
+
 export function ageMs(v: string | null | undefined, now: number = Date.now()): number | null {
   if (!v) return null;
   const t = new Date(v).getTime();
@@ -98,4 +146,9 @@ export function humanize(v: string): string {
 
 export function tierLabel(index0: number): string {
   return `T${index0 + 1}`;
+}
+
+/** Engine reasons carry raw decimals ("400.000000 + 300 > 500.000000"); trim trailing zeros. */
+export function readableReason(reason: string): string {
+  return reason.replace(/(\d+)\.(\d*?)0+(?!\d)/g, (_m, a: string, b: string) => (b ? `${a}.${b}` : a));
 }

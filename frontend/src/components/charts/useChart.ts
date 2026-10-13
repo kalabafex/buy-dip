@@ -1,46 +1,59 @@
-import { createChart, type IChartApi } from "lightweight-charts";
+import { createChart, type IChartApi, type MouseEventParams, type Time } from "lightweight-charts";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { chartTheme, safeLocale } from "@/components/charts/theme";
+import { chartColors, chartOptions, type ChartColors } from "@/components/charts/theme";
 import { useDarkMode } from "@/lib/hooks";
 
 /**
- * Creates a lightweight-charts instance in `container` (auto-resized with the container
- * via ResizeObserver), follows the color scheme, and disposes it on unmount.
- * `setup` runs once after creation to add series; its return value is kept in state.
+ * Creates a lightweight-charts instance in `container` (auto-sized), rebuilt when the theme
+ * changes so every series picks up the mode's colors, and disposed on unmount.
+ * `setup` adds series; its return value is kept in state (null until created).
  */
 export function useChart<T>(
   container: RefObject<HTMLDivElement | null>,
-  setup: (chart: IChartApi) => T,
+  setup: (chart: IChartApi, colors: ChartColors) => T,
+  { interactive = true }: { interactive?: boolean } = {},
 ): T | null {
   const dark = useDarkMode();
   const [state, setState] = useState<T | null>(null);
-  const chartRef = useRef<IChartApi | null>(null);
   const setupRef = useRef(setup);
-  const darkRef = useRef(dark);
 
   useEffect(() => {
     const el = container.current;
     if (!el) return;
-    const chart = createChart(el, {
-      ...chartTheme(darkRef.current),
-      autoSize: true,
-      localization: { locale: safeLocale() },
-      crosshair: { mode: 0 },
-      timeScale: { ...chartTheme(darkRef.current).timeScale, rightOffset: 3 },
+    const colors = chartColors(dark);
+    const chart = createChart(el, { ...chartOptions(colors, interactive), autoSize: true });
+    setState(setupRef.current(chart, colors));
+    // Keep the whole series in view when the container changes size (autoSize alone keeps
+    // the bar spacing, which crops the right edge if data arrived before layout settled).
+    let lastWidth = 0;
+    let disposed = false;
+    const ro = new ResizeObserver(([entry]) => {
+      const w = Math.round(entry?.contentRect.width ?? 0);
+      if (w && w !== lastWidth) {
+        lastWidth = w;
+        requestAnimationFrame(() => !disposed && chart.timeScale().fitContent());
+      }
     });
-    chartRef.current = chart;
-    setState(setupRef.current(chart));
+    ro.observe(el);
     return () => {
-      chartRef.current = null;
+      disposed = true;
+      ro.disconnect();
       setState(null);
       chart.remove();
     };
-  }, [container]);
-
-  useEffect(() => {
-    darkRef.current = dark;
-    chartRef.current?.applyOptions(chartTheme(dark));
-  }, [dark]);
+  }, [container, dark, interactive]);
 
   return state;
+}
+
+/** Time under the crosshair (null when the pointer leaves the plot). */
+export function useCrosshairTime(chart: IChartApi | null | undefined): Time | null {
+  const [time, setTime] = useState<Time | null>(null);
+  useEffect(() => {
+    if (!chart) return;
+    const on = (p: MouseEventParams<Time>) => setTime(p.time ?? null);
+    chart.subscribeCrosshairMove(on);
+    return () => chart.unsubscribeCrosshairMove(on);
+  }, [chart]);
+  return time;
 }

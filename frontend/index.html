@@ -6,6 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light dark" />
     <title>Dip Buyer</title>
+    <script>
+      // Apply the saved theme before first paint (see src/lib/theme.ts).
+      (function () {
+        var pref = "system";
+        try {
+          pref = localStorage.getItem("dipbuyer.theme") || "system";
+        } catch (e) {}
+        var dark =
+          pref === "dark" ||
+          (pref !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        if (dark) document.documentElement.classList.add("dark");
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

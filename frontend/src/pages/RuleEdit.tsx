@@ -6,7 +6,7 @@ import { FormProvider, useForm, type FieldPath } from "react-hook-form";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, isApiError, type Schemas } from "@/api/client";
 import { qk, useRule } from "@/api/queries";
-import { ErrorBox, Loading, PageHeader, Spinner } from "@/components/common";
+import { ErrorBox, PageHeader, PageSkeleton, Spinner } from "@/components/common";
 import { RuleFormFields } from "@/components/rules/RuleFormFields";
 import { FormRulePreview, SavedRulePreview } from "@/components/rules/RulePreviewPanel";
 import {
@@ -18,12 +18,13 @@ import {
 } from "@/components/rules/ruleSchema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "@/lib/toast";
 
 /** Create (/rules/new) or edit (/rules/:id/edit) a rule. */
 export function RuleEditPage() {
   const { id } = useParams();
   const rule = useRule(id);
-  if (id && rule.isPending) return <Loading />;
+  if (id && rule.isPending) return <PageSkeleton />;
   if (id && rule.isError) return <ErrorBox error={rule.error} />;
   return <RuleEditor key={id ?? "new"} rule={rule.data} />;
 }
@@ -52,9 +53,14 @@ function RuleEditor({ rule }: { rule: Schemas["RuleOut"] | undefined }) {
     onSuccess: (saved) => {
       qc.setQueryData(qk.rule(saved.id), saved);
       void qc.invalidateQueries({ queryKey: qk.rules });
+      toast.success(
+        rule ? `Saved ${saved.symbol}` : `Created rule ${saved.symbol}`,
+        saved.enabled ? "Enabled." : "Disabled until you enable it.",
+      );
       navigate(`/rules/${saved.id}`);
     },
     onError: (e) => {
+      toast.error("Could not save the rule", e);
       if (isApiError(e, 422)) {
         for (const [path, msg] of Object.entries(e.fieldErrors)) {
           if (path) form.setError(path as FieldPath<RuleFormValues>, { message: msg });
@@ -65,10 +71,14 @@ function RuleEditor({ rule }: { rule: Schemas["RuleOut"] | undefined }) {
 
   const dirty = form.formState.isDirty;
   return (
-    <div>
+    <div className="grid grid-cols-1 gap-5">
       <PageHeader
         title={rule ? `Edit ${rule.symbol}` : "New rule"}
-        subtitle={rule ? "Changes apply to the next evaluation." : "New rules start disabled unless enabled here."}
+        subtitle={
+          rule
+            ? "Changes apply from the worker's next evaluation."
+            : "Define the trigger, the tier ladder and the limits. New rules start disabled unless you enable them here."
+        }
         actions={
           <Button variant="ghost" size="sm" asChild>
             <Link to={rule ? `/rules/${rule.id}` : "/rules"}>
@@ -77,14 +87,18 @@ function RuleEditor({ rule }: { rule: Schemas["RuleOut"] | undefined }) {
           </Button>
         }
       />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <Card>
-          <CardContent className="pt-4">
+          <CardContent className="pt-5 sm:pt-5">
             <FormProvider {...form}>
-              <form className="grid grid-cols-1 gap-4" onSubmit={form.handleSubmit((v) => save.mutate(v))} noValidate>
+              <form
+                className="grid grid-cols-1 gap-6"
+                onSubmit={form.handleSubmit((v) => save.mutate(v))}
+                noValidate
+              >
                 <RuleFormFields />
                 <ErrorBox error={save.error} />
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
                   <Button variant="outline" asChild>
                     <Link to={rule ? `/rules/${rule.id}` : "/rules"}>Cancel</Link>
                   </Button>
@@ -96,7 +110,7 @@ function RuleEditor({ rule }: { rule: Schemas["RuleOut"] | undefined }) {
             </FormProvider>
           </CardContent>
         </Card>
-        <div className="grid grid-cols-1 content-start gap-4">
+        <div className="grid grid-cols-1 content-start gap-4 lg:sticky lg:top-20">
           {rule && !dirty ? (
             <SavedRulePreview id={rule.id} triggerType={rule.trigger_type} />
           ) : (

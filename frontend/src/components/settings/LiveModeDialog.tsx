@@ -15,14 +15,21 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/lib/toast";
 
 /** Two-step switch to LIVE: re-auth (if not elevated), then type "LIVE" to confirm. */
-export function LiveModeDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+export function LiveModeDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-red-600 dark:text-red-400">Switch to LIVE trading</DialogTitle>
+          <DialogTitle className="text-loss">Switch to LIVE trading</DialogTitle>
           <DialogDescription>
             The worker will place real orders with real money using your live broker account.
           </DialogDescription>
@@ -44,6 +51,7 @@ function LiveModeSteps({ onDone }: { onDone: () => void }) {
     mutationFn: () => api.post("/api/mode", { body: { mode: "LIVE", confirm } }),
     onSuccess: (s) => {
       qc.setQueryData(qk.settings, s);
+      toast.success("LIVE trading enabled", "The worker now places real orders.");
       onDone();
     },
     onError: (e) => {

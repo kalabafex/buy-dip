@@ -1,10 +1,17 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, errorText, type Schemas } from "@/api/client";
+import { api, type Schemas } from "@/api/client";
 import { qk } from "@/api/queries";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "@/lib/toast";
 
 /** PATCH /api/rules/{id}/enabled with an optimistic update of the rules list. */
-export function EnabledToggle({ rule }: { rule: Schemas["RuleOut"] }) {
+export function EnabledToggle({
+  rule,
+  showLabel = false,
+}: {
+  rule: Schemas["RuleOut"];
+  showLabel?: boolean;
+}) {
   const qc = useQueryClient();
   const m = useMutation({
     mutationFn: (enabled: boolean) =>
@@ -17,23 +24,27 @@ export function EnabledToggle({ rule }: { rule: Schemas["RuleOut"] }) {
       );
       return { prev };
     },
-    onError: (_e, _v, ctx) => {
+    onError: (e, _v, ctx) => {
       if (ctx?.prev) qc.setQueryData(qk.rules, ctx.prev);
+      toast.error(`Could not update ${rule.symbol}`, e);
     },
     onSuccess: (saved) => {
       qc.setQueryData(qk.rule(saved.id), saved);
+      toast.success(`${saved.symbol} ${saved.enabled ? "enabled" : "disabled"}`);
     },
     onSettled: () => qc.invalidateQueries({ queryKey: qk.rules }),
   });
   return (
-    <span className="inline-flex items-center gap-2" title={m.error ? errorText(m.error) : undefined}>
+    <span className="inline-flex items-center gap-2">
       <Switch
         checked={rule.enabled ?? false}
         disabled={m.isPending}
         onCheckedChange={(v) => m.mutate(v)}
         aria-label={`${rule.enabled ? "Disable" : "Enable"} ${rule.symbol}`}
       />
-      {m.error && <span className="text-xs text-red-600">failed</span>}
+      {showLabel && (
+        <span className="text-xs text-muted-foreground">{rule.enabled ? "Enabled" : "Disabled"}</span>
+      )}
     </span>
   );
 }

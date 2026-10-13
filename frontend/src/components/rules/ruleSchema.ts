@@ -17,13 +17,20 @@ export const TRIGGER_LABELS: Record<Schemas["TriggerType"], string> = {
   BELOW_MA: "Close below moving average",
 };
 
+export const TRIGGER_HELP: Record<Schemas["TriggerType"], string> = {
+  PULLBACK_FROM_HIGH:
+    "Buys when the price has fallen a tier's drop % below its highest close of the last N days.",
+  RSI_OVERSOLD:
+    "Buys while RSI(14), a 0–100 momentum gauge, is at or below the threshold; tier prices still come from the N-day high.",
+  BELOW_MA: "Buys while the price is below its moving average; tier prices still come from the N-day high.",
+};
+
 export const TREND_LABELS: Record<Schemas["TrendFilter"], string> = {
-  NONE: "None",
+  NONE: "None (any trend)",
   ABOVE_200DMA: "Only above 200-day SMA",
 };
 
-const num = (msg = "Must be a number") =>
-  z.number({ required_error: "Required", invalid_type_error: msg });
+const num = (msg = "Must be a number") => z.number({ required_error: "Required", invalid_type_error: msg });
 const int = (min: number, max: number) =>
   num().int("Must be a whole number").min(min, `Min ${min}`).max(max, `Max ${max}`);
 
@@ -166,11 +173,14 @@ export function fromSnapshot(snap: Record<string, unknown>): RuleFormValues | nu
   return parsed.success ? parsed.data : null;
 }
 
+/** Recommendation params (API) → form values, for prefilling a backtest. */
+export function fromParams(p: Schemas["RecommendedParams"]): RuleFormValues | null {
+  return fromSnapshot(p as unknown as Record<string, unknown>);
+}
+
 /** "-5%/$100 · -10%/$200" */
 export function tiersSummary(tiers: { drop_pct: string | number; amount_usd: string | number }[]): string {
-  return tiers
-    .map((t) => `-${Number(t.drop_pct)}%/$${Number(t.amount_usd).toLocaleString()}`)
-    .join(" · ");
+  return tiers.map((t) => `-${Number(t.drop_pct)}%/$${Number(t.amount_usd).toLocaleString()}`).join(" · ");
 }
 
 export function triggerSummary(r: {

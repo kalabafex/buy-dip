@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Play } from "lucide-react";
 import { Controller, FormProvider, useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { api, type Schemas } from "@/api/client";
@@ -7,11 +8,18 @@ import { qk, useRules } from "@/api/queries";
 import { ErrorBox, Spinner } from "@/components/common";
 import { FormField } from "@/components/FormField";
 import { RuleFormFields } from "@/components/rules/RuleFormFields";
-import { DEFAULT_RULE, ruleSchema, tiersSummary, toRuleParams, type RuleFormValues } from "@/components/rules/ruleSchema";
+import {
+  DEFAULT_RULE,
+  ruleSchema,
+  tiersSummary,
+  toRuleParams,
+  type RuleFormValues,
+} from "@/components/rules/ruleSchema";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { AdornedInput, Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "@/lib/toast";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a date");
 
@@ -47,10 +55,12 @@ const numOpts = { setValueAs: (v: unknown) => (v === "" || v == null ? undefined
 export function BacktestForm({
   onCreated,
   initialParams,
+  initialRange,
 }: {
   onCreated: (id: string) => void;
-  /** Prefill for ad-hoc params (e.g. "re-run with edits" from a past backtest). */
+  /** Prefill for ad-hoc params (e.g. "re-run with edits", or from a recommendation). */
   initialParams?: RuleFormValues | null;
+  initialRange?: { start: string; end: string };
 }) {
   const qc = useQueryClient();
   const rules = useRules();
@@ -59,8 +69,8 @@ export function BacktestForm({
     defaultValues: {
       source: initialParams ? "params" : "rule",
       rule_id: "",
-      start_date: isoDaysAgo(365 * 3),
-      end_date: isoDaysAgo(1),
+      start_date: initialRange?.start ?? isoDaysAgo(365 * 3),
+      end_date: initialRange?.end ?? isoDaysAgo(1),
       starting_cash: 10_000,
     },
   });
@@ -74,8 +84,10 @@ export function BacktestForm({
     mutationFn: (body: Schemas["BacktestIn"]) => api.post("/api/backtests", { body }),
     onSuccess: ({ id }) => {
       void qc.invalidateQueries({ queryKey: qk.backtests });
+      toast.success("Backtest queued", "The worker picks it up within about 10 seconds.");
       onCreated(id);
     },
+    onError: (e) => toast.error("Could not start the backtest", e),
   });
 
   const submit = form.handleSubmit(async (v) => {
@@ -121,7 +133,7 @@ export function BacktestForm({
                 />
               </FormField>
             </TabsContent>
-            <TabsContent value="params" forceMount hidden={field.value !== "params"}>
+            <TabsContent value="params" forceMount hidden={field.value !== "params"} className="mt-5">
               <FormProvider {...paramsForm}>
                 <RuleFormFields idPrefix="bt" showEnabled={false} />
               </FormProvider>
@@ -129,7 +141,7 @@ export function BacktestForm({
           </Tabs>
         )}
       />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 border-t pt-4 sm:grid-cols-4">
         <FormField id="bt-start" label="Start date" error={errors.start_date?.message}>
           <Input id="bt-start" type="date" {...form.register("start_date")} />
         </FormField>
@@ -137,16 +149,22 @@ export function BacktestForm({
           <Input id="bt-end" type="date" {...form.register("end_date")} />
         </FormField>
         <FormField id="bt-cash" label="Starting cash (USD)" error={errors.starting_cash?.message}>
-          <Input id="bt-cash" type="number" step="any" {...form.register("starting_cash", numOpts)} />
+          <AdornedInput
+            id="bt-cash"
+            type="number"
+            step="any"
+            prefix="$"
+            {...form.register("starting_cash", numOpts)}
+          />
         </FormField>
-        <div className="flex items-end">
+        <div className="col-span-2 flex items-end sm:col-span-1">
           <Button type="submit" className="w-full" disabled={create.isPending}>
-            {create.isPending && <Spinner />} Run backtest
+            {create.isPending ? <Spinner /> : <Play />} Run backtest
           </Button>
         </div>
       </div>
       {source === "params" && Object.keys(paramsForm.formState.errors).length > 0 && (
-        <p className="text-xs text-red-600">Fix the rule parameters above.</p>
+        <p className="text-xs text-loss">Fix the rule parameters above.</p>
       )}
       <ErrorBox error={create.error} />
     </form>
