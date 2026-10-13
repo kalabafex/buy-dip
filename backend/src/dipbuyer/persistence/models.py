@@ -208,6 +208,24 @@ class BacktestRow(Base):
     finished_at: Mapped[dt.datetime | None]
 
 
+class RecommendationRow(Base):
+    """A queued/finished history-based recommendation run for one symbol."""
+
+    __tablename__ = "recommendations"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    symbol: Mapped[str] = mapped_column(String(12), index=True)
+    years: Mapped[int] = mapped_column(Integer)
+    budget_per_dip_usd: Mapped[Decimal]
+    max_position_usd: Mapped[Decimal]
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    results: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
+    finished_at: Mapped[dt.datetime | None]
+
+
 class AuditLogRow(Base):
     """Records kill-switch and mode changes made through the API."""
 

@@ -1095,6 +1095,30 @@
         "title": "PreviewOut",
         "type": "object"
       },
+      "ProfitPoint": {
+        "properties": {
+          "baseline": {
+            "title": "Baseline",
+            "type": "string"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "rule",
+          "baseline"
+        ],
+        "title": "ProfitPoint",
+        "type": "object"
+      },
       "ReauthIn": {
         "properties": {
           "password": {
@@ -1111,6 +1135,581 @@
           "totp"
         ],
         "title": "ReauthIn",
+        "type": "object"
+      },
+      "RecommendationApplyIn": {
+        "properties": {
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "RecommendationApplyIn",
+        "type": "object"
+      },
+      "RecommendationCurrent": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "condition_met": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition Met"
+          },
+          "last_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Close"
+          },
+          "pullback_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pullback Pct"
+          },
+          "rsi14": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rsi14"
+          }
+        },
+        "title": "RecommendationCurrent",
+        "type": "object"
+      },
+      "RecommendationFullPeriod": {
+        "properties": {
+          "baseline": {
+            "$ref": "#/components/schemas/RecommendationMetrics"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "profit_curve": {
+            "items": {
+              "$ref": "#/components/schemas/ProfitPoint"
+            },
+            "title": "Profit Curve",
+            "type": "array"
+          },
+          "rule": {
+            "$ref": "#/components/schemas/RecommendationMetrics"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "rule",
+          "baseline",
+          "profit_curve"
+        ],
+        "title": "RecommendationFullPeriod",
+        "type": "object"
+      },
+      "RecommendationHalf": {
+        "properties": {
+          "median_edge_pct": {
+            "title": "Median Edge Pct",
+            "type": "number"
+          },
+          "win_rate": {
+            "title": "Win Rate",
+            "type": "number"
+          },
+          "windows": {
+            "title": "Windows",
+            "type": "integer"
+          },
+          "windows_with_buys": {
+            "title": "Windows With Buys",
+            "type": "integer"
+          },
+          "worst_edge_pct": {
+            "title": "Worst Edge Pct",
+            "type": "number"
+          }
+        },
+        "required": [
+          "windows",
+          "windows_with_buys",
+          "win_rate",
+          "median_edge_pct",
+          "worst_edge_pct"
+        ],
+        "title": "RecommendationHalf",
+        "type": "object"
+      },
+      "RecommendationHistory": {
+        "properties": {
+          "first": {
+            "format": "date",
+            "title": "First",
+            "type": "string"
+          },
+          "last": {
+            "format": "date",
+            "title": "Last",
+            "type": "string"
+          }
+        },
+        "required": [
+          "first",
+          "last"
+        ],
+        "title": "RecommendationHistory",
+        "type": "object"
+      },
+      "RecommendationIn": {
+        "properties": {
+          "budget_per_dip_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100000.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "600",
+            "title": "Budget Per Dip Usd"
+          },
+          "max_position_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 10000000.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "default": "3000",
+            "title": "Max Position Usd"
+          },
+          "symbol": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "years": {
+            "default": 10,
+            "maximum": 20.0,
+            "minimum": 5.0,
+            "title": "Years",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "RecommendationIn",
+        "type": "object"
+      },
+      "RecommendationItem": {
+        "properties": {
+          "buys_per_year": {
+            "title": "Buys Per Year",
+            "type": "number"
+          },
+          "confidence": {
+            "enum": [
+              "strong",
+              "moderate",
+              "weak"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          },
+          "current": {
+            "$ref": "#/components/schemas/RecommendationCurrent"
+          },
+          "full_period": {
+            "$ref": "#/components/schemas/RecommendationFullPeriod"
+          },
+          "is_reference": {
+            "title": "Is Reference",
+            "type": "boolean"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "median_cost_advantage_pct": {
+            "title": "Median Cost Advantage Pct",
+            "type": "number"
+          },
+          "params": {
+            "$ref": "#/components/schemas/RecommendedParams"
+          },
+          "selection": {
+            "$ref": "#/components/schemas/RecommendationHalf"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/RecommendationHalf"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "is_reference",
+          "confidence",
+          "params",
+          "selection",
+          "validation",
+          "median_cost_advantage_pct",
+          "buys_per_year",
+          "current",
+          "full_period"
+        ],
+        "title": "RecommendationItem",
+        "type": "object"
+      },
+      "RecommendationMetrics": {
+        "properties": {
+          "avg_cost": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Cost"
+          },
+          "final_equity": {
+            "title": "Final Equity",
+            "type": "string"
+          },
+          "final_value": {
+            "title": "Final Value",
+            "type": "string"
+          },
+          "max_drawdown_pct": {
+            "title": "Max Drawdown Pct",
+            "type": "string"
+          },
+          "num_buys": {
+            "title": "Num Buys",
+            "type": "integer"
+          },
+          "return_pct": {
+            "title": "Return Pct",
+            "type": "string"
+          },
+          "total_invested": {
+            "title": "Total Invested",
+            "type": "string"
+          }
+        },
+        "required": [
+          "total_invested",
+          "final_value",
+          "final_equity",
+          "return_pct",
+          "max_drawdown_pct",
+          "num_buys",
+          "avg_cost"
+        ],
+        "title": "RecommendationMetrics",
+        "type": "object"
+      },
+      "RecommendationOut": {
+        "properties": {
+          "budget_per_dip_usd": {
+            "title": "Budget Per Dip Usd",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "max_position_usd": {
+            "title": "Max Position Usd",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "integer"
+          },
+          "results": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecommendationResults"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/BacktestStatus"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "years": {
+            "title": "Years",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "symbol",
+          "years",
+          "budget_per_dip_usd",
+          "max_position_usd",
+          "status",
+          "progress",
+          "results",
+          "error",
+          "created_at",
+          "finished_at"
+        ],
+        "title": "RecommendationOut",
+        "type": "object"
+      },
+      "RecommendationResults": {
+        "properties": {
+          "candidates_tested": {
+            "title": "Candidates Tested",
+            "type": "integer"
+          },
+          "history": {
+            "$ref": "#/components/schemas/RecommendationHistory"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/RecommendationItem"
+            },
+            "title": "Recommendations",
+            "type": "array"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecommendationItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "split_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Date"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "window_years": {
+            "title": "Window Years",
+            "type": "integer"
+          },
+          "windows": {
+            "title": "Windows",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "symbol",
+          "history",
+          "windows",
+          "window_years",
+          "split_date",
+          "candidates_tested",
+          "recommendations",
+          "reference"
+        ],
+        "title": "RecommendationResults",
+        "type": "object"
+      },
+      "RecommendedParams": {
+        "description": "Rule parameters of a recommendation (same fields as RuleParams).",
+        "properties": {
+          "confirm_evals": {
+            "default": 2,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Confirm Evals",
+            "type": "integer"
+          },
+          "cooldown_days": {
+            "default": 5,
+            "maximum": 60.0,
+            "minimum": 0.0,
+            "title": "Cooldown Days",
+            "type": "integer"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "limit_offset_pct": {
+            "default": "0.3",
+            "title": "Limit Offset Pct",
+            "type": "string"
+          },
+          "lookback_days": {
+            "default": 20,
+            "maximum": 250.0,
+            "minimum": 5.0,
+            "title": "Lookback Days",
+            "type": "integer"
+          },
+          "ma_period": {
+            "anyOf": [
+              {
+                "maximum": 250.0,
+                "minimum": 10.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ma Period"
+          },
+          "max_position_usd": {
+            "title": "Max Position Usd",
+            "type": "string"
+          },
+          "rsi_threshold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rsi Threshold"
+          },
+          "symbol": {
+            "maxLength": 12,
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "tiers": {
+            "items": {
+              "$ref": "#/components/schemas/Tier-Output"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Tiers",
+            "type": "array"
+          },
+          "trend_filter": {
+            "$ref": "#/components/schemas/TrendFilter",
+            "default": "ABOVE_200DMA"
+          },
+          "trigger_type": {
+            "$ref": "#/components/schemas/TriggerType",
+            "default": "PULLBACK_FROM_HIGH"
+          }
+        },
+        "required": [
+          "symbol",
+          "tiers",
+          "max_position_usd"
+        ],
+        "title": "RecommendedParams",
         "type": "object"
       },
       "RuleOut": {
@@ -2337,6 +2936,201 @@
         "summary": "Positions",
         "tags": [
           "activity"
+        ]
+      }
+    },
+    "/api/recommendations": {
+      "get": {
+        "operationId": "list_recommendations_api_recommendations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RecommendationOut"
+                  },
+                  "title": "Response List Recommendations Api Recommendations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Recommendations",
+        "tags": [
+          "recommendations"
+        ]
+      },
+      "post": {
+        "operationId": "create_recommendation_api_recommendations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BacktestCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Recommendation",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/recommendations/{rec_id}": {
+      "delete": {
+        "operationId": "delete_recommendation_api_recommendations__rec_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rec_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rec Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Recommendation",
+        "tags": [
+          "recommendations"
+        ]
+      },
+      "get": {
+        "operationId": "get_recommendation_api_recommendations__rec_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rec_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rec Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Recommendation",
+        "tags": [
+          "recommendations"
+        ]
+      }
+    },
+    "/api/recommendations/{rec_id}/apply": {
+      "post": {
+        "description": "Create a rule from one recommended configuration.",
+        "operationId": "apply_recommendation_api_recommendations__rec_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "rec_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rec Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationApplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Apply Recommendation",
+        "tags": [
+          "recommendations"
         ]
       }
     },

@@ -185,3 +185,21 @@ Choices made where the spec was silent or ambiguous, and every deviation from it
     is more than 15 minutes old.
 50. `POST /rules/preview` (unsaved edits) computes tier prices from the current N-day high,
     not from an active cycle's `ref_high`. The preview panel says so.
+
+## Recommendations
+
+51. `POST /api/recommendations` queues a per-symbol sweep that the worker runs (like
+    backtests). The grid is 40 configurations from the families that held up in
+    `docs/rule-research.md`, plus the app's default rule as a reference row. Each is
+    backtested with the unchanged backtester on rolling 3-year windows (6-month step, after
+    one year of warm-up). Windows are split chronologically: the first half is "selection",
+    the second half "validation". Ranking is by the lower of the two win rates against
+    monthly DCA (same dollars), then by the sum of median edges. Confidence: "strong" when
+    both halves win ≥ 80% of windows with median edge ≥ 2 pts; "moderate" when ≥ 60% and
+    positive. A rule that bought in fewer than 75% of windows is ranked as weak.
+52. Each recommendation also carries one full-period backtest with a profit curve (rule vs
+    DCA). Over a long period a dip rule can trail DCA even while it wins most 3-year windows,
+    because dip purchases happen later and compound for less time; the UI shows both.
+53. Tier amounts are scaled so the ladder sums to `budget_per_dip_usd` (weights 1, 2, 3, ...).
+    `POST /api/recommendations/{id}/apply` creates the chosen configuration as a disabled
+    rule. Candidates run in a process pool (up to 4 workers).

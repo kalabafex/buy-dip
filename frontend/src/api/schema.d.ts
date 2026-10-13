@@ -226,6 +226,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Recommendations */
+        get: operations["list_recommendations_api_recommendations_get"];
+        put?: never;
+        /** Create Recommendation */
+        post: operations["create_recommendation_api_recommendations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recommendations/{rec_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Recommendation */
+        get: operations["get_recommendation_api_recommendations__rec_id__get"];
+        put?: never;
+        post?: never;
+        /** Delete Recommendation */
+        delete: operations["delete_recommendation_api_recommendations__rec_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/recommendations/{rec_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply Recommendation
+         * @description Create a rule from one recommended configuration.
+         */
+        post: operations["apply_recommendation_api_recommendations__rec_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/rules": {
         parameters: {
             query?: never;
@@ -750,12 +806,241 @@ export interface components {
             /** Trend Ok */
             trend_ok: boolean;
         };
+        /** ProfitPoint */
+        ProfitPoint: {
+            /** Baseline */
+            baseline: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Rule */
+            rule: string;
+        };
         /** ReauthIn */
         ReauthIn: {
             /** Password */
             password: string;
             /** Totp */
             totp: string;
+        };
+        /** RecommendationApplyIn */
+        RecommendationApplyIn: {
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** Key */
+            key: string;
+        };
+        /** RecommendationCurrent */
+        RecommendationCurrent: {
+            /** As Of */
+            as_of?: string | null;
+            /** Condition Met */
+            condition_met?: boolean | null;
+            /** Last Close */
+            last_close?: string | null;
+            /** Pullback Pct */
+            pullback_pct?: string | null;
+            /** Rsi14 */
+            rsi14?: string | null;
+        };
+        /** RecommendationFullPeriod */
+        RecommendationFullPeriod: {
+            baseline: components["schemas"]["RecommendationMetrics"];
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Profit Curve */
+            profit_curve: components["schemas"]["ProfitPoint"][];
+            rule: components["schemas"]["RecommendationMetrics"];
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
+        /** RecommendationHalf */
+        RecommendationHalf: {
+            /** Median Edge Pct */
+            median_edge_pct: number;
+            /** Win Rate */
+            win_rate: number;
+            /** Windows */
+            windows: number;
+            /** Windows With Buys */
+            windows_with_buys: number;
+            /** Worst Edge Pct */
+            worst_edge_pct: number;
+        };
+        /** RecommendationHistory */
+        RecommendationHistory: {
+            /**
+             * First
+             * Format: date
+             */
+            first: string;
+            /**
+             * Last
+             * Format: date
+             */
+            last: string;
+        };
+        /** RecommendationIn */
+        RecommendationIn: {
+            /**
+             * Budget Per Dip Usd
+             * @default 600
+             */
+            budget_per_dip_usd: number | string;
+            /**
+             * Max Position Usd
+             * @default 3000
+             */
+            max_position_usd: number | string;
+            /** Symbol */
+            symbol: string;
+            /**
+             * Years
+             * @default 10
+             */
+            years: number;
+        };
+        /** RecommendationItem */
+        RecommendationItem: {
+            /** Buys Per Year */
+            buys_per_year: number;
+            /**
+             * Confidence
+             * @enum {string}
+             */
+            confidence: "strong" | "moderate" | "weak";
+            current: components["schemas"]["RecommendationCurrent"];
+            full_period: components["schemas"]["RecommendationFullPeriod"];
+            /** Is Reference */
+            is_reference: boolean;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Median Cost Advantage Pct */
+            median_cost_advantage_pct: number;
+            params: components["schemas"]["RecommendedParams"];
+            selection: components["schemas"]["RecommendationHalf"];
+            validation: components["schemas"]["RecommendationHalf"];
+        };
+        /** RecommendationMetrics */
+        RecommendationMetrics: {
+            /** Avg Cost */
+            avg_cost: string | null;
+            /** Final Equity */
+            final_equity: string;
+            /** Final Value */
+            final_value: string;
+            /** Max Drawdown Pct */
+            max_drawdown_pct: string;
+            /** Num Buys */
+            num_buys: number;
+            /** Return Pct */
+            return_pct: string;
+            /** Total Invested */
+            total_invested: string;
+        };
+        /** RecommendationOut */
+        RecommendationOut: {
+            /** Budget Per Dip Usd */
+            budget_per_dip_usd: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error: string | null;
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Max Position Usd */
+            max_position_usd: string;
+            /** Progress */
+            progress: number;
+            results: components["schemas"]["RecommendationResults"] | null;
+            status: components["schemas"]["BacktestStatus"];
+            /** Symbol */
+            symbol: string;
+            /** Years */
+            years: number;
+        };
+        /** RecommendationResults */
+        RecommendationResults: {
+            /** Candidates Tested */
+            candidates_tested: number;
+            history: components["schemas"]["RecommendationHistory"];
+            /** Recommendations */
+            recommendations: components["schemas"]["RecommendationItem"][];
+            reference: components["schemas"]["RecommendationItem"] | null;
+            /** Split Date */
+            split_date: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Window Years */
+            window_years: number;
+            /** Windows */
+            windows: number;
+        };
+        /**
+         * RecommendedParams
+         * @description Rule parameters of a recommendation (same fields as RuleParams).
+         */
+        RecommendedParams: {
+            /**
+             * Confirm Evals
+             * @default 2
+             */
+            confirm_evals: number;
+            /**
+             * Cooldown Days
+             * @default 5
+             */
+            cooldown_days: number;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Limit Offset Pct
+             * @default 0.3
+             */
+            limit_offset_pct: string;
+            /**
+             * Lookback Days
+             * @default 20
+             */
+            lookback_days: number;
+            /** Ma Period */
+            ma_period?: number | null;
+            /** Max Position Usd */
+            max_position_usd: string;
+            /** Rsi Threshold */
+            rsi_threshold?: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Tiers */
+            tiers: components["schemas"]["Tier-Output"][];
+            /** @default ABOVE_200DMA */
+            trend_filter: components["schemas"]["TrendFilter"];
+            /** @default PULLBACK_FROM_HIGH */
+            trigger_type: components["schemas"]["TriggerType"];
         };
         /** RuleOut */
         RuleOut: {
@@ -1353,6 +1638,154 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PositionOut"][];
+                };
+            };
+        };
+    };
+    list_recommendations_api_recommendations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationOut"][];
+                };
+            };
+        };
+    };
+    create_recommendation_api_recommendations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BacktestCreated"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_recommendation_api_recommendations__rec_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rec_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecommendationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_recommendation_api_recommendations__rec_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rec_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_recommendation_api_recommendations__rec_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                rec_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationApplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

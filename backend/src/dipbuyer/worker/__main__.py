@@ -21,6 +21,7 @@ from dipbuyer.logging_setup import setup_logging
 from dipbuyer.persistence.db import get_engine, make_session_factory
 from dipbuyer.worker.backtest_runner import run_queued
 from dipbuyer.worker.loop import TradingLoop
+from dipbuyer.worker.recommendation_runner import run_queued as run_recommendations
 
 log = logging.getLogger("dipbuyer.worker")
 
@@ -83,6 +84,12 @@ def main() -> None:
         except Exception:
             log.exception("backtest runner failed")
 
+    def recommendation_job() -> None:
+        try:
+            run_recommendations(sf, bar_service_factory)
+        except Exception:
+            log.exception("recommendation runner failed")
+
     sched = BlockingScheduler(timezone="UTC")
     # Runs every minute; the loop itself enforces evaluation_interval_minutes from settings.
     sched.add_job(trading_job, "interval", minutes=1, id="trading", max_instances=1, coalesce=True)
@@ -93,6 +100,7 @@ def main() -> None:
         max_instances=1,
     )
     sched.add_job(backtest_job, "interval", seconds=10, id="backtests", max_instances=1)
+    sched.add_job(recommendation_job, "interval", seconds=10, id="recommendations", max_instances=1)
 
     def shutdown(signum: int, _frame: FrameType | None) -> None:
         log.info("shutting down", extra={"signal": signum})

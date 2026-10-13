@@ -11,7 +11,15 @@ from starlette.middleware.sessions import SessionMiddleware
 from dipbuyer.alerts import make_notifier
 from dipbuyer.api.deps import AppDeps
 from dipbuyer.api.events import EventBus, psycopg_dsn
-from dipbuyer.api.routers import activity, auth, backtests, rules, settings, system
+from dipbuyer.api.routers import (
+    activity,
+    auth,
+    backtests,
+    recommendations,
+    rules,
+    settings,
+    system,
+)
 from dipbuyer.api.security import RateLimiter, TotpVerifier
 from dipbuyer.broker.alpaca import AlpacaBroker
 from dipbuyer.config import Settings, get_settings
@@ -106,7 +114,7 @@ def create_app(deps: AppDeps | None = None) -> FastAPI:
         allow_headers=["Content-Type"],
     )
     api = APIRouter(prefix="/api")
-    for r in (auth, system, rules, settings, activity, backtests):
+    for r in (auth, system, rules, settings, activity, backtests, recommendations):
         api.include_router(r.router)
     app.include_router(api)
     return app

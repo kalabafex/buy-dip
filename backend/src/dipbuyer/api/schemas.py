@@ -241,3 +241,106 @@ class BacktestOut(BaseModel):
     error: str | None
     created_at: dt.datetime
     finished_at: dt.datetime | None
+
+
+# --- recommendations -----------------------------------------------------------------
+
+
+class RecommendationIn(BaseModel):
+    symbol: Annotated[str, Field(min_length=1, max_length=12)]
+    years: Annotated[int, Field(ge=5, le=20)] = 10
+    budget_per_dip_usd: Annotated[Decimal, Field(gt=0, le=100_000)] = Decimal(600)
+    max_position_usd: Annotated[Decimal, Field(gt=0, le=10_000_000)] = Decimal(3000)
+
+
+class RecommendationHalf(BaseModel):
+    windows: int
+    windows_with_buys: int
+    win_rate: float
+    median_edge_pct: float
+    worst_edge_pct: float
+
+
+class RecommendationMetrics(BaseModel):
+    total_invested: Decimal
+    final_value: Decimal
+    final_equity: Decimal
+    return_pct: Decimal
+    max_drawdown_pct: Decimal
+    num_buys: int
+    avg_cost: Decimal | None
+
+
+class ProfitPoint(BaseModel):
+    date: dt.date
+    rule: Decimal
+    baseline: Decimal
+
+
+class RecommendationFullPeriod(BaseModel):
+    start: dt.date
+    end: dt.date
+    rule: RecommendationMetrics
+    baseline: RecommendationMetrics
+    profit_curve: list[ProfitPoint]
+
+
+class RecommendationCurrent(BaseModel):
+    as_of: dt.date | None = None
+    last_close: Decimal | None = None
+    condition_met: bool | None = None
+    pullback_pct: Decimal | None = None
+    rsi14: Decimal | None = None
+
+
+class RecommendedParams(RuleParams):
+    """Rule parameters of a recommendation (same fields as RuleParams)."""
+
+
+class RecommendationItem(BaseModel):
+    key: str
+    label: str
+    is_reference: bool
+    confidence: Literal["strong", "moderate", "weak"]
+    params: RecommendedParams
+    selection: RecommendationHalf
+    validation: RecommendationHalf
+    median_cost_advantage_pct: float
+    buys_per_year: float
+    current: RecommendationCurrent
+    full_period: RecommendationFullPeriod
+
+
+class RecommendationHistory(BaseModel):
+    first: dt.date
+    last: dt.date
+
+
+class RecommendationResults(BaseModel):
+    symbol: str
+    history: RecommendationHistory
+    windows: int
+    window_years: int
+    split_date: dt.date | None
+    candidates_tested: int
+    recommendations: list[RecommendationItem]
+    reference: RecommendationItem | None
+
+
+class RecommendationOut(BaseModel):
+    id: uuid.UUID
+    symbol: str
+    years: int
+    budget_per_dip_usd: Decimal
+    max_position_usd: Decimal
+    status: BacktestStatus
+    progress: int
+    results: RecommendationResults | None
+    error: str | None
+    created_at: dt.datetime
+    finished_at: dt.datetime | None
+
+
+class RecommendationApplyIn(BaseModel):
+    key: str
+    enabled: bool = False

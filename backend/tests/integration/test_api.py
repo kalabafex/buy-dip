@@ -401,3 +401,45 @@ def test_openapi_schema_lists_all_routes(api: Ctx) -> None:
         "/api/stream",
     ):
         assert p in paths
+
+
+def test_recommendation_flow(
+    api: Ctx, sf: sessionmaker[Session], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import math
+
+    import dipbuyer.recommend as rec
+    from dipbuyer.worker.recommendation_runner import run_queued as run_recs
+
+    subset = [c for c in rec.candidate_grid() if c.key in {"rsi35-5-10-20-c2-cd5", "default"}]
+    monkeypatch.setattr(rec, "candidate_grid", lambda: subset)
+    api.login()
+    c = api.client
+    closes = [f"{100 * (1.0004**i) * (1 + 0.07 * math.sin(i / 25)):.2f}" for i in range(2200)]
+    md = FakeMarketData()
+    md.add_bars(make_bars("SPY", closes, PREV_SESSION))
+    assert c.post("/api/recommendations", json={"symbol": "NOPE"}).status_code == 422
+    r = c.post(
+        "/api/recommendations", json={"symbol": "spy", "years": 7, "budget_per_dip_usd": 600}
+    )
+    assert r.status_code == 201, r.text
+    rec_id = r.json()["id"]
+    assert c.get(f"/api/recommendations/{rec_id}").json()["status"] == "QUEUED"
+    assert run_recs(sf, lambda _m: BarService(md), now=lambda: NOW, max_workers=1) == 1
+    got = c.get(f"/api/recommendations/{rec_id}").json()
+    assert got["status"] == "DONE", got["error"]
+    assert got["progress"] == 100
+    res = got["results"]
+    assert res["symbol"] == "SPY" and res["reference"]["key"] == "default"
+    top = res["recommendations"][0]
+    assert top["key"] == "rsi35-5-10-20-c2-cd5"
+    assert [D(t["amount_usd"]) for t in top["params"]["tiers"]] == [D(100), D(200), D(300)]
+    assert len(c.get("/api/recommendations").json()) == 1
+
+    made = c.post(f"/api/recommendations/{rec_id}/apply", json={"key": top["key"]})
+    assert made.status_code == 201, made.text
+    assert made.json()["symbol"] == "SPY" and made.json()["enabled"] is False
+    assert made.json()["trigger_type"] == "RSI_OVERSOLD"
+    assert c.post(f"/api/recommendations/{rec_id}/apply", json={"key": "nope"}).status_code == 404
+    assert c.delete(f"/api/recommendations/{rec_id}").status_code == 204
+    assert c.get(f"/api/recommendations/{rec_id}").status_code == 404

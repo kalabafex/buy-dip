@@ -25,7 +25,7 @@ def _get(db: DbDep, rule_id: uuid.UUID) -> RuleRow:
     return row
 
 
-def _validate_symbol(deps: DepsDep, db: DbDep, symbol: str) -> None:
+def validate_symbol(deps: DepsDep, db: DbDep, symbol: str) -> None:
     mode = repo.settings_model(repo.get_settings_row(db)).trading_mode
     try:
         asset = deps.asset_lookup(symbol, mode)
@@ -44,7 +44,7 @@ def list_rules(db: DbDep, _: UserDep) -> list[RuleOut]:
 
 @router.post("", response_model=RuleOut, status_code=201)
 def create_rule(body: RuleParams, db: DbDep, deps: DepsDep, _: UserDep) -> RuleOut:
-    _validate_symbol(deps, db, body.symbol)
+    validate_symbol(deps, db, body.symbol)
     row = RuleRow(id=uuid.uuid4())
     repo.apply_params(row, body)
     db.add(row)
@@ -76,7 +76,7 @@ def update_rule(
             raise HTTPException(
                 status.HTTP_409_CONFLICT, "cannot change symbol while a cycle or order is open"
             )
-        _validate_symbol(deps, db, body.symbol)
+        validate_symbol(deps, db, body.symbol)
     repo.apply_params(row, body)
     db.flush()
     return rule_out(db, row)
