@@ -131,6 +131,7 @@ class TradingLoop:
         self.now = now
         self.dry_run = dry_run
         self._cap_alerted: set[tuple[str, dt.date]] = set()
+        self._logged_today: set[tuple[str, dt.date]] = set()
 
     # --- entry points -----------------------------------------------------------------
     def tick(self, *, force: bool = False) -> TickOutcome:
@@ -165,6 +166,8 @@ class TradingLoop:
         if settings.kill_switch:
             if cancel_pending:
                 self._cancel_all_for_kill_switch(settings.trading_mode)
+            if market.is_open:
+                self._log_once(now, "kill_switch", "kill switch is on: not evaluating rules")
             return TickOutcome.KILL_SWITCH
         if not market.is_open or market.in_exclusion_window:
             return TickOutcome.MARKET_CLOSED
@@ -185,6 +188,13 @@ class TradingLoop:
         )
         with session_scope(self.sf) as s:
             rules = [repo.rule_from_row(r) for r in repo.list_rules(s, enabled_only=True)]
+        if not rules:
+            self._log_once(now, "no_rules", "no enabled rules: enable a rule to get evaluations")
+        else:
+            log.info(
+                "tick",
+                extra={"rules": len(rules), "mode": settings.trading_mode.value},
+            )
         for rule in rules:
             try:
                 self._evaluate_rule(rule, ctx)
@@ -194,6 +204,13 @@ class TradingLoop:
                     "Worker exception", f"{rule.symbol} ({rule.id}): {exc}", priority="high"
                 )
         return TickOutcome.RAN
+
+    def _log_once(self, now: dt.datetime, key: str, message: str) -> None:
+        """Log ``message`` at most once per NY trading day (avoids a line every tick)."""
+        day_key = (key, ny_date(now))
+        if day_key not in self._logged_today:
+            self._logged_today.add(day_key)
+            log.info(message)
 
     # --- kill switch ------------------------------------------------------------------
     def _cancel_all_for_kill_switch(self, mode: TradingMode) -> None:

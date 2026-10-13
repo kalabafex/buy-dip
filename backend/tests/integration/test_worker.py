@@ -6,6 +6,7 @@ import time
 import uuid
 from decimal import Decimal as D
 
+import pytest
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -385,3 +386,24 @@ def test_advisory_lock_is_exclusive(world: World) -> None:
             assert not b
     with try_advisory_lock(world.engine) as c:
         assert c
+
+
+def test_logs_once_when_no_rules_enabled(world: World, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO", logger="dipbuyer.worker.loop")
+    loop = world.loop()
+    loop.tick(force=True)
+    world.clock.advance(5)
+    loop.tick(force=True)
+    msgs = [r.getMessage() for r in caplog.records]
+    assert sum("no enabled rules" in m for m in msgs) == 1
+
+
+def test_logs_once_when_kill_switch_on(world: World, caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO", logger="dipbuyer.worker.loop")
+    add_rule(world.sf)
+    set_settings(world.sf, kill_switch=True)
+    loop = world.loop()
+    loop.tick(force=True)
+    loop.tick(force=True)
+    msgs = [r.getMessage() for r in caplog.records]
+    assert sum("kill switch is on" in m for m in msgs) == 1

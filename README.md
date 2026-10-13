@@ -102,6 +102,13 @@ canceled on the worker's next tick, within about a minute, and no new orders are
 Turning it off requires re-authentication. To stop everything at once:
 `docker compose stop worker`.
 
+**Keep the host awake.** The worker only evaluates while the machine is running. On a
+laptop or desktop, disable sleep during US market hours (Windows: Settings → System → Power →
+"Put my device to sleep" → Never while plugged in). apscheduler "Run time of job ... was
+missed" warnings in the worker log mean the machine was asleep. During market hours the
+worker logs a `tick` line every evaluation interval, or once per day "no enabled rules" /
+"kill switch is on" when there is nothing to evaluate.
+
 **Health.** Watch the dashboard's "last heartbeat" card and your `HEARTBEAT_URL` monitor.
 Worker exceptions also trigger ntfy alerts. Logs: `just logs worker`.
 
