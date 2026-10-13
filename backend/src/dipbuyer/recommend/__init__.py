@@ -35,6 +35,8 @@ D = Decimal
 WINDOW_YEARS = 3
 STEP_MONTHS = 6
 MIN_WINDOWS = 4
+DEFAULT_BUDGET = D(600)
+DEFAULT_MAX_POSITION = D(3000)
 # Generous caps so the comparison measures the rule itself, not the global spend caps.
 SIM_SETTINGS = GlobalSettingsModel(
     max_daily_spend_usd=D(1_000_000), max_weekly_spend_usd=D(1_000_000)
@@ -268,10 +270,16 @@ CURVE_POINTS = 160
 
 
 def _full_period(
-    cand: Candidate, bars: Sequence[Bar], start: dt.date, end: dt.date
+    cand: Candidate,
+    bars: Sequence[Bar],
+    start: dt.date,
+    end: dt.date,
+    budget: Decimal,
+    max_position: Decimal,
 ) -> dict[str, Any]:
-    """One backtest over the whole tested range, with a profit curve (rule vs DCA)."""
-    rule = cand.to_rule("SIM", D(600), D(10**9))
+    """One backtest over the whole tested range at the user's budget and position cap,
+    with a profit curve (rule vs DCA investing the same dollars)."""
+    rule = cand.to_rule("SIM", budget, max_position)
     sim_bars = [b.model_copy(update={"symbol": "SIM"}) for b in bars]
     cash = D(10**8)
     res = run_backtest(rule, sim_bars, start, end, cash, SIM_SETTINGS)
@@ -356,7 +364,11 @@ def recommend(
     candidates: Sequence[Candidate] | None = None,
     progress: Callable[[int, int], None] | None = None,
     max_workers: int | None = None,
+    budget_per_dip: Decimal = DEFAULT_BUDGET,
+    max_position: Decimal = DEFAULT_MAX_POSITION,
 ) -> RecommendationResult:
+    """Window scores use a fixed $600 ladder without a position cap (they compare rules);
+    the full-period backtest uses ``budget_per_dip`` and ``max_position``."""
     bars = sorted(bars, key=lambda b: b.session_date)
     if not bars:
         raise ValueError(f"no price history for {symbol}")
@@ -389,7 +401,9 @@ def recommend(
     shown = [*ranked[:5], *([reference] if reference is not None else [])]
     current = {s.candidate.key: _current(s.candidate, bars) for s in shown}
     for s in shown:
-        s.full_period = _full_period(s.candidate, bars, windows[0][0], windows[-1][1])
+        s.full_period = _full_period(
+            s.candidate, bars, windows[0][0], windows[-1][1], budget_per_dip, max_position
+        )
     return RecommendationResult(
         symbol=symbol,
         first_date=bars[0].session_date,

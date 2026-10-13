@@ -53,7 +53,21 @@ def rule_out(s: Session, row: RuleRow) -> RuleOut:
     ).one_or_none()
     cycle = repo.get_active_cycle(s, row.id)
     filled = list(cycle.tiers_filled) if cycle else []
-    out = RuleOut(
+    ref = cycle.ref_high if cycle else (ev.ref_high if ev else None)
+    floor = max(filled, default=-1)
+    nxt = next((i for i in range(len(rule.tiers)) if i > floor), None)
+    next_tier: int | None = None
+    next_price: Decimal | None = None
+    distance: Decimal | None = None
+    if ref and nxt is not None:
+        next_tier = nxt
+        next_price = round_to_cent(ref * (1 - rule.tiers[nxt].drop_pct / HUNDRED))
+        if ev and ev.last_price:
+            distance = ((ev.last_price - next_price) / ev.last_price * HUNDRED).quantize(
+                Decimal("0.01")
+            )
+    # RuleOut is frozen (it extends RuleParams), so every field is set at construction.
+    return RuleOut(
         **rule.model_dump(exclude={"deleted_at"}),
         last_evaluation=(
             LastEvaluation(
@@ -67,19 +81,10 @@ def rule_out(s: Session, row: RuleRow) -> RuleOut:
         ),
         active_cycle_ref_high=cycle.ref_high if cycle else None,
         tiers_filled=filled,
+        next_tier=next_tier,
+        next_tier_price=next_price,
+        distance_to_next_tier_pct=distance,
     )
-    ref = cycle.ref_high if cycle else (ev.ref_high if ev else None)
-    floor = max(filled, default=-1)
-    nxt = next((i for i in range(len(rule.tiers)) if i > floor), None)
-    if ref and nxt is not None:
-        price = round_to_cent(ref * (1 - rule.tiers[nxt].drop_pct / HUNDRED))
-        out.next_tier = nxt
-        out.next_tier_price = price
-        if ev and ev.last_price:
-            out.distance_to_next_tier_pct = (
-                (ev.last_price - price) / ev.last_price * HUNDRED
-            ).quantize(Decimal("0.01"))
-    return out
 
 
 def preview(

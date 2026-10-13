@@ -198,7 +198,8 @@ Choices made where the spec was silent or ambiguous, and every deviation from it
     both halves win ≥ 80% of windows with median edge ≥ 2 pts; "moderate" when ≥ 60% and
     positive. A rule that bought in fewer than 75% of windows is ranked as weak.
 52. Each recommendation also carries one full-period backtest with a profit curve (rule vs
-    DCA). Over a long period a dip rule can trail DCA even while it wins most 3-year windows,
+    DCA), run at the requested budget per dip and position cap (window scores use a fixed
+    $600 ladder without a cap, so they compare rules rather than budgets). Over a long period a dip rule can trail DCA even while it wins most 3-year windows,
     because dip purchases happen later and compound for less time; the UI shows both.
 53. Tier amounts are scaled so the ladder sums to `budget_per_dip_usd` (weights 1, 2, 3, ...).
     `POST /api/recommendations/{id}/apply` creates the chosen configuration as a disabled

@@ -88,6 +88,8 @@ def run_queued(
                 bars,
                 progress=_progress_writer(sf, rec_id),
                 max_workers=max_workers or default_workers(),
+                budget_per_dip=budget,
+                max_position=max_pos,
             )
             with session_scope(sf) as s:
                 row = s.get_one(RecommendationRow, rec_id)

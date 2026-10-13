@@ -443,3 +443,47 @@ def test_recommendation_flow(
     assert c.post(f"/api/recommendations/{rec_id}/apply", json={"key": "nope"}).status_code == 404
     assert c.delete(f"/api/recommendations/{rec_id}").status_code == 204
     assert c.get(f"/api/recommendations/{rec_id}").status_code == 404
+
+
+def test_rules_list_with_evaluation_and_cycle(api: Ctx, sf: sessionmaker[Session]) -> None:
+    """Regression: RuleOut is frozen; next-tier fields must not be set after construction."""
+    from dipbuyer.persistence.models import DipCycleRow
+
+    api.login()
+    rid = add_rule(sf)
+    with sf.begin() as s:
+        s.add(
+            EvaluationRow(
+                rule_id=rid,
+                ts=NOW,
+                session_date=NOW.date(),
+                last_price=D(96),
+                ref_high=D(100),
+                sma50=None,
+                sma200=None,
+                rsi14=None,
+                pullback_pct=D(4),
+                condition_met=False,
+                consecutive_met=0,
+                tier_hit=None,
+                decision="NO_TRIGGER",
+                reason="x",
+            )
+        )
+    [r] = api.client.get("/api/rules").json()
+    assert r["next_tier"] == 0 and D(r["next_tier_price"]) == D(95)
+    assert D(r["distance_to_next_tier_pct"]) == D("1.04")  # (96 - 95) / 96
+    with sf.begin() as s:
+        s.add(
+            DipCycleRow(
+                id=uuid.uuid4(),
+                rule_id=rid,
+                state="ACTIVE",
+                ref_high=D(100),
+                tiers_filled=[0],
+                started_at=NOW,
+            )
+        )
+    r = api.client.get(f"/api/rules/{rid}").json()
+    assert r["next_tier"] == 1 and D(r["next_tier_price"]) == D(90)
+    assert r["tiers_filled"] == [0]
