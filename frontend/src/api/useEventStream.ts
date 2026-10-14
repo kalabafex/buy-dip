@@ -8,7 +8,9 @@ export type StreamState = "connecting" | "open" | "closed";
 const INVALIDATES: Record<string, QueryKey[]> = {
   evaluation: [["evaluations"], qk.rules],
   order: [["orders"], qk.account, qk.positions, qk.settings, qk.rules],
-  settings: [qk.settings, qk.rules],
+  settings: [qk.settings, qk.rules, qk.picks],
+  // {session_date,...} on publish/evaluation, {id,status} per pick, {model, progress|status}.
+  picks: [qk.picks],
 };
 
 /** Events that carry `{id, ...}` of a job: refresh that job and the list. */

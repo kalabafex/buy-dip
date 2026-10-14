@@ -5,6 +5,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { BacktestPage } from "@/pages/Backtest";
 import { DashboardPage } from "@/pages/Dashboard";
 import { LoginPage } from "@/pages/Login";
+import { PicksPage } from "@/pages/Picks";
+import { PicksModelPage } from "@/pages/PicksModel";
+import { PicksPerformancePage } from "@/pages/PicksPerformance";
 import { RecommendationsPage } from "@/pages/Recommendations";
 import { RuleDetailPage } from "@/pages/RuleDetail";
 import { RuleEditPage } from "@/pages/RuleEdit";
@@ -18,7 +21,11 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<RequireAuth />}>
           <Route element={<AppLayout />}>
-            <Route index element={<DashboardPage />} />
+            <Route index element={<PicksPage />} />
+            <Route path="picks" element={<Navigate to="/" replace />} />
+            <Route path="picks/performance" element={<PicksPerformancePage />} />
+            <Route path="picks/model" element={<PicksModelPage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
             <Route path="rules" element={<RulesPage />} />
             <Route path="rules/new" element={<RuleEditPage />} />
             <Route path="rules/:id" element={<RuleDetailPage />} />

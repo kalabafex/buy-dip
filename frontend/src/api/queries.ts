@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { inPicksWindow } from "@/lib/picks";
 import { api, isApiError, type QueryOf, type Schemas } from "./client";
 
 export const qk = {
@@ -18,6 +19,13 @@ export const qk = {
   backtest: (id: string) => ["backtests", id] as const,
   recommendations: ["recommendations"] as const,
   recommendation: (id: string) => ["recommendations", id] as const,
+  /** Prefix of every daily-picks query (SSE `picks` events invalidate all of them). */
+  picks: ["picks"] as const,
+  picksDay: (date: string | null) => ["picks", "day", date ?? "today"] as const,
+  picksDays: (limit: number) => ["picks", "days", limit] as const,
+  picksPerformance: ["picks", "performance"] as const,
+  picksModel: ["picks", "model"] as const,
+  picksSettings: ["picks", "settings"] as const,
 };
 
 export type OrdersQuery = QueryOf<"/api/orders", "get">;
@@ -173,6 +181,54 @@ export function useRecommendation(id: string | null) {
     refetchInterval: (query) => {
       const s = query.state.data?.status;
       return s && FINISHED.includes(s) ? false : 2_000;
+    },
+  });
+}
+
+// --- Daily picks -------------------------------------------------------------------------
+
+const CALIBRATING: Schemas["BacktestStatus"][] = ["QUEUED", "RUNNING"];
+
+/**
+ * One day's picks (default: today in New York). Polled every 5 s while a calibration is
+ * running and every 30 s around market hours, as a fallback to SSE `picks` events.
+ */
+export function usePicksDay(date: string | null) {
+  return useQuery({
+    queryKey: qk.picksDay(date),
+    queryFn: ({ signal }) => api.get("/api/picks/day", { query: { date }, signal }),
+    placeholderData: keepPreviousData,
+    refetchInterval: (query) => {
+      if (query.state.data?.calibration_in_progress) return 5_000;
+      return inPicksWindow(Date.now()) ? 30_000 : false;
+    },
+  });
+}
+
+export function usePicksDays(limit = 60) {
+  return useQuery({
+    queryKey: qk.picksDays(limit),
+    queryFn: ({ signal }) => api.get("/api/picks/days", { query: { limit }, signal }),
+    staleTime: 60_000,
+  });
+}
+
+export function usePicksPerformance() {
+  return useQuery({
+    queryKey: qk.picksPerformance,
+    queryFn: ({ signal }) => api.get("/api/picks/performance", { signal }),
+    staleTime: 60_000,
+  });
+}
+
+/** Latest calibration (any status); polled every 5 s while queued/running. */
+export function usePicksModel() {
+  return useQuery({
+    queryKey: qk.picksModel,
+    queryFn: ({ signal }) => api.get("/api/picks/model", { signal }),
+    refetchInterval: (query) => {
+      const s = query.state.data?.status;
+      return s && CALIBRATING.includes(s) ? 5_000 : false;
     },
   });
 }
