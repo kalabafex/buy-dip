@@ -95,6 +95,18 @@ class Bar(Frozen):
     volume: Decimal
 
 
+class DaySnapshot(Frozen):
+    """Current-session market data for one symbol (from a market-data snapshot)."""
+
+    symbol: str
+    session_date: dt.date
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    last: Decimal
+    prev_close: Decimal | None = None
+
+
 class IndicatorSnapshot(Frozen):
     """Indicator values for one evaluation. ``None`` means not enough history."""
 
@@ -152,6 +164,20 @@ class BrokerOrder(Frozen):
     status: OrderStatus
     filled_qty: Decimal
     filled_avg_price: Decimal | None
+
+
+class BracketState(Frozen):
+    """State of an entry order and its take-profit / stop-loss exit legs."""
+
+    entry_broker_id: str
+    entry_status: OrderStatus
+    entry_filled_qty: Decimal
+    entry_avg_price: Decimal | None
+    exit_filled_qty: Decimal = Decimal(0)
+    exit_avg_price: Decimal | None = None
+    exit_reason: str | None = None
+    """TARGET or STOP when an exit leg filled."""
+    open_leg_ids: tuple[str, ...] = ()
 
 
 class OrderIntent(BaseModel):

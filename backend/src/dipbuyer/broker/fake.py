@@ -13,6 +13,7 @@ from dipbuyer.domain.enums import OrderStatus
 from dipbuyer.domain.models import (
     Account,
     AssetInfo,
+    BracketState,
     BrokerOrder,
     Clock,
     OrderIntent,
@@ -45,6 +46,16 @@ class FakeOrder:
 
 
 @dataclass
+class FakeBracket:
+    entry: FakeOrder
+    take_profit: FakeOrder | None
+    stop_loss: FakeOrder | None
+
+    def legs(self) -> list[FakeOrder]:
+        return [x for x in (self.take_profit, self.stop_loss) if x is not None]
+
+
+@dataclass
 class _Holding:
     qty: Decimal = ZERO
     cost: Decimal = ZERO
@@ -65,6 +76,8 @@ class FakeBroker:
     # "timeout_before_accept": request lost, client sees a timeout.
     # "reject": broker rejects.
     submit_failures: list[str] = field(default_factory=list[str])
+    brackets: dict[str, FakeBracket] = field(default_factory=dict[str, FakeBracket])
+    sells: dict[str, FakeOrder] = field(default_factory=dict[str, FakeOrder])
     _lock: threading.Lock = field(default_factory=threading.Lock)
 
     # --- BrokerClient -----------------------------------------------------------------
@@ -138,18 +151,135 @@ class FakeBroker:
             return order.view()
 
     def get_order_by_client_id(self, client_order_id: str) -> BrokerOrder | None:
-        order = self.orders.get(client_order_id)
+        order = self.orders.get(client_order_id) or self.sells.get(client_order_id)
         return order.view() if order else None
 
+    def _all_orders(self) -> list[FakeOrder]:
+        legs = [leg for b in self.brackets.values() for leg in b.legs()]
+        return [*self.orders.values(), *legs, *self.sells.values()]
+
     def cancel_order(self, broker_order_id: str) -> None:
-        for o in self.orders.values():
+        for o in self._all_orders():
             if o.broker_order_id == broker_order_id and o.status in _OPEN:
                 o.status = OrderStatus.CANCELED
+                self._cancel_sibling_leg(o)
 
     def cancel_all_open(self) -> None:
-        for o in self.orders.values():
+        for o in self._all_orders():
             if o.status in _OPEN:
                 o.status = OrderStatus.CANCELED
+
+    def _cancel_sibling_leg(self, leg: FakeOrder) -> None:
+        """Exit legs are one-cancels-other."""
+        for b in self.brackets.values():
+            if leg in b.legs():
+                for other in b.legs():
+                    if other is not leg and other.status in _OPEN:
+                        other.status = OrderStatus.CANCELED
+
+    # --- bracket orders -------------------------------------------------------------------
+    def submit_bracket_buy(
+        self,
+        client_order_id: str,
+        symbol: str,
+        qty: int,
+        limit_price: Decimal,
+        take_profit: Decimal | None,
+        stop_loss: Decimal | None,
+    ) -> BrokerOrder:
+        with self._lock:
+            self.submit_calls += 1
+            failure = self.submit_failures.pop(0) if self.submit_failures else None
+            if failure == "timeout_before_accept":
+                raise BrokerTransientError("simulated timeout before accept")
+            if failure == "reject":
+                raise BrokerRejectedError("simulated rejection")
+            if client_order_id in self.orders:
+                raise BrokerRejectedError("client_order_id must be unique")
+            entry = FakeOrder(
+                broker_order_id=str(uuid.uuid4()),
+                client_order_id=client_order_id,
+                symbol=symbol,
+                qty=Decimal(qty),
+                limit_price=limit_price,
+            )
+
+            def leg(price: Decimal | None) -> FakeOrder | None:
+                if price is None:
+                    return None
+                return FakeOrder(
+                    broker_order_id=str(uuid.uuid4()),
+                    client_order_id=f"{client_order_id}-leg-{uuid.uuid4().hex[:6]}",
+                    symbol=symbol,
+                    qty=Decimal(qty),
+                    limit_price=price,
+                )
+
+            self.orders[client_order_id] = entry
+            self.brackets[client_order_id] = FakeBracket(entry, leg(take_profit), leg(stop_loss))
+            if failure == "timeout_after_accept":
+                raise BrokerTransientError("simulated timeout after accept")
+            return entry.view()
+
+    def get_bracket(self, client_order_id: str) -> BracketState | None:
+        b = self.brackets.get(client_order_id)
+        if b is None:
+            return None
+        filled_leg = next((x for x in b.legs() if x.filled_qty > 0), None)
+        reason = None
+        if filled_leg is not None:
+            reason = "TARGET" if filled_leg is b.take_profit else "STOP"
+        return BracketState(
+            entry_broker_id=b.entry.broker_order_id,
+            entry_status=b.entry.status,
+            entry_filled_qty=b.entry.filled_qty,
+            entry_avg_price=b.entry.filled_avg_price,
+            exit_filled_qty=filled_leg.filled_qty if filled_leg else ZERO,
+            exit_avg_price=filled_leg.filled_avg_price if filled_leg else None,
+            exit_reason=reason,
+            open_leg_ids=tuple(x.broker_order_id for x in b.legs() if x.status in _OPEN),
+        )
+
+    def submit_market_sell(self, client_order_id: str, symbol: str, qty: Decimal) -> BrokerOrder:
+        with self._lock:
+            if client_order_id in self.sells:
+                raise BrokerRejectedError("client_order_id must be unique")
+            price = self.marks.get(symbol)
+            h = self.holdings.get(symbol)
+            if price is None and h is not None and h.qty > 0:
+                price = h.cost / h.qty
+            order = FakeOrder(
+                broker_order_id=str(uuid.uuid4()),
+                client_order_id=client_order_id,
+                symbol=symbol,
+                qty=qty,
+                limit_price=price or ZERO,
+            )
+            self.sells[client_order_id] = order
+            if price is not None:
+                self._sell(symbol, qty, price)
+                order.filled_qty, order.filled_avg_price = qty, price
+                order.status = OrderStatus.FILLED
+            return order.view()
+
+    def _sell(self, symbol: str, qty: Decimal, price: Decimal) -> None:
+        h = self.holdings.setdefault(symbol, _Holding())
+        if h.qty > 0:
+            h.cost -= h.cost * (qty / h.qty)
+        h.qty -= qty
+        self.cash += qty * price
+
+    def hit_exit(self, client_order_id: str, which: str, price: Decimal | None = None) -> None:
+        """Fill the TARGET or STOP leg of a filled bracket (OCO cancels the other)."""
+        b = self.brackets[client_order_id]
+        leg = b.take_profit if which == "TARGET" else b.stop_loss
+        if leg is None or leg.status not in _OPEN:
+            raise ValueError(f"no open {which} leg")
+        px = price if price is not None else leg.limit_price
+        qty = b.entry.filled_qty
+        leg.filled_qty, leg.filled_avg_price, leg.status = qty, px, OrderStatus.FILLED
+        self._sell(b.entry.symbol, qty, px)
+        self._cancel_sibling_leg(leg)
 
     # --- simulation controls ----------------------------------------------------------
     def fill(self, client_order_id: str, price: Decimal, qty: Decimal | None = None) -> None:

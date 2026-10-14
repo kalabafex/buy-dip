@@ -204,3 +204,24 @@ Choices made where the spec was silent or ambiguous, and every deviation from it
 53. Tier amounts are scaled so the ladder sums to `budget_per_dip_usd` (weights 1, 2, 3, ...).
     `POST /api/recommendations/{id}/apply` creates the chosen configuration as a disabled
     rule. Candidates run in a process pool (up to 4 workers).
+
+## Daily picks
+
+54. **Scope change requested by the user:** daily intraday picks with automated entries and
+    exits. The spec's out-of-scope list (exit automation, intraday strategies) no longer
+    applies to this feature. Auto-trade is limited to PAPER mode and is off by default.
+55. Setups are evaluated on **daily OHLC bars** (not minute bars): entries are at the open
+    (published 5 minutes after it), exits at a target/stop or the close. When both the
+    target and the stop are inside a day's range the stop is assumed first. This keeps
+    calibration cheap (seconds for 500 stocks × 5 years) and avoids downloading minute bars.
+56. Calibration statistics use float64 (they are statistics, not money); prices sent to
+    the broker and stored are Decimal.
+57. A setup is traded only if its validation-period mean return is positive with t ≥ 2 over
+    ≥ 100 trades, after choosing its exit on the training period. Per-stock history is
+    shrunk toward the setup average with weight 20.
+58. Orders are Alpaca bracket orders (OTO when only one of target/stop applies), whole
+    shares, DAY time in force, `client_order_id = pick id`; the forced exit is a market sell
+    with `client_order_id = <pick id>-exit`. Only the picks' own quantities are sold, so
+    dip-buyer positions in the same symbol are untouched.
+59. Picks run under their own advisory lock and are independent of the dip-buyer rules
+    and spend caps; they have their own per-pick notional setting.

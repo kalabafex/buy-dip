@@ -74,6 +74,13 @@ class GlobalSettingsRow(Base):
     evaluation_interval_minutes: Mapped[int] = mapped_column(Integer, default=5)
     open_exclusion_minutes: Mapped[int] = mapped_column(Integer, default=15)
     close_exclusion_minutes: Mapped[int] = mapped_column(Integer, default=10)
+    picks_autotrade: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    picks_notional_usd: Mapped[Decimal] = mapped_column(
+        default=Decimal(1000), server_default="1000"
+    )
+    picks_min_expected_pct: Mapped[Decimal] = mapped_column(
+        default=Decimal("0.05"), server_default="0.05"
+    )
     updated_at: Mapped[dt.datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 
 
@@ -224,6 +231,83 @@ class RecommendationRow(Base):
     error: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
     finished_at: Mapped[dt.datetime | None]
+
+
+class PickModelRow(Base):
+    """A calibration of the daily-picks setups over the universe."""
+
+    __tablename__ = "pick_models"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    data_start: Mapped[dt.date | None] = mapped_column(Date)
+    data_end: Mapped[dt.date | None] = mapped_column(Date)
+    symbols: Mapped[int] = mapped_column(Integer, default=0)
+    summary: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    stock_stats: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
+    finished_at: Mapped[dt.datetime | None]
+
+
+class DailyPickRow(Base):
+    """One of the day's ranked intraday picks, its plan, trade and outcome."""
+
+    __tablename__ = "daily_picks"
+    __table_args__ = (
+        UniqueConstraint("session_date", "rank", name="uq_daily_picks_rank"),
+        UniqueConstraint("session_date", "symbol", name="uq_daily_picks_symbol"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    session_date: Mapped[dt.date] = mapped_column(Date, index=True)
+    rank: Mapped[int] = mapped_column(Integer)
+    model_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("pick_models.id"))
+    symbol: Mapped[str] = mapped_column(String(12))
+    name: Mapped[str] = mapped_column(String(120))
+    sector: Mapped[str] = mapped_column(String(60))
+    family: Mapped[str] = mapped_column(String(32))
+    exit_key: Mapped[str] = mapped_column(String(32))
+    accepted: Mapped[bool] = mapped_column(Boolean)
+    features: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    # plan
+    open_price: Mapped[Decimal]
+    entry_limit: Mapped[Decimal]
+    target_price: Mapped[Decimal | None]
+    stop_price: Mapped[Decimal | None]
+    entry_time: Mapped[dt.datetime]
+    exit_time: Mapped[dt.datetime]
+    expected_return: Mapped[Decimal]
+    """Fraction (0.004 = 0.4%), after costs, blended stock/family history."""
+    win_rate: Mapped[Decimal]
+    samples: Mapped[int] = mapped_column(Integer)
+    family_mean: Mapped[Decimal]
+    # trading
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    skip_reason: Mapped[str | None] = mapped_column(Text)
+    mode: Mapped[str | None] = mapped_column(String(8))
+    qty: Mapped[int | None] = mapped_column(Integer)
+    entry_order_id: Mapped[str | None] = mapped_column(String(64))
+    entry_filled_qty: Mapped[Decimal | None]
+    entry_fill_price: Mapped[Decimal | None]
+    exit_order_id: Mapped[str | None] = mapped_column(String(64))
+    exit_filled_qty: Mapped[Decimal | None]
+    exit_fill_price: Mapped[Decimal | None]
+    exit_reason: Mapped[str | None] = mapped_column(String(16))
+    realized_return: Mapped[Decimal | None]
+    realized_pnl_usd: Mapped[Decimal | None]
+    error: Mapped[str | None] = mapped_column(Text)
+    # what following the plan returned, from the day's OHLC (whether or not it traded)
+    day_open: Mapped[Decimal | None]
+    day_high: Mapped[Decimal | None]
+    day_low: Mapped[Decimal | None]
+    day_close: Mapped[Decimal | None]
+    plan_return: Mapped[Decimal | None]
+    plan_exit_reason: Mapped[str | None] = mapped_column(String(16))
+    plan_exit_price: Mapped[Decimal | None]
+    created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 
 
 class AuditLogRow(Base):

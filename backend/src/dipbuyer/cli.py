@@ -215,6 +215,26 @@ def cmd_seed_rules(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_refresh_universe(args: argparse.Namespace) -> int:
+    """Download the current S&P 500 list into the bundled CSV."""
+    import urllib.request  # noqa: PLC0415
+
+    from dipbuyer.picks.universe import SOURCE_URL, parse_csv  # noqa: PLC0415
+
+    with urllib.request.urlopen(SOURCE_URL, timeout=30) as resp:  # noqa: S310 - fixed https URL
+        members = parse_csv(resp.read().decode("utf-8"))
+    if len(members) < 400:
+        _out(f"refusing to write: only {len(members)} symbols downloaded")
+        return 1
+    out = Path(args.out)
+    lines = ["symbol,name,sector"] + [
+        ",".join(f'"{v}"' if "," in v else v for v in (m.symbol, m.name, m.sector)) for m in members
+    ]
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    _out(f"wrote {len(members)} symbols to {out}")
+    return 0
+
+
 def cmd_check_env(args: argparse.Namespace) -> int:
     from dipbuyer.envcheck import check_env_file  # noqa: PLC0415
 
@@ -250,6 +270,9 @@ def main(argv: list[str] | None = None) -> int:
     o.add_argument("--from-url", metavar="URL", help="read the schema from a running backend")
     o.set_defaults(fn=cmd_openapi)
     sub.add_parser("gen-secret").set_defaults(fn=cmd_gen_secret)
+    ru = sub.add_parser("refresh-universe")
+    ru.add_argument("--out", default="src/dipbuyer/picks/data/sp500.csv")
+    ru.set_defaults(fn=cmd_refresh_universe)
     sr = sub.add_parser("seed-rules")
     sr.add_argument("--force", action="store_true", help="add even if the symbol has a rule")
     sr.add_argument("--database-url", default=None)

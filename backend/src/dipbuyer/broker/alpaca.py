@@ -9,14 +9,20 @@ from decimal import Decimal
 import requests
 from alpaca.common.exceptions import APIError
 from alpaca.trading.client import TradingClient
-from alpaca.trading.enums import OrderSide, OrderType, TimeInForce
+from alpaca.trading.enums import OrderClass, OrderSide, OrderType, TimeInForce
 from alpaca.trading.enums import OrderStatus as AlpacaOrderStatus
 from alpaca.trading.models import Asset as AlpacaAsset
 from alpaca.trading.models import Clock as AlpacaClock
 from alpaca.trading.models import Order as AlpacaOrder
 from alpaca.trading.models import Position as AlpacaPosition
 from alpaca.trading.models import TradeAccount
-from alpaca.trading.requests import LimitOrderRequest
+from alpaca.trading.requests import (
+    GetOrderByIdRequest,
+    LimitOrderRequest,
+    MarketOrderRequest,
+    StopLossRequest,
+    TakeProfitRequest,
+)
 
 from dipbuyer.broker.base import (
     BrokerError,
@@ -28,6 +34,7 @@ from dipbuyer.domain.enums import OrderStatus, TradingMode
 from dipbuyer.domain.models import (
     Account,
     AssetInfo,
+    BracketState,
     BrokerOrder,
     Clock,
     OrderIntent,
@@ -86,7 +93,115 @@ def to_broker_order(o: AlpacaOrder) -> BrokerOrder:
     )
 
 
-class AlpacaBroker:
+_TERMINAL = {
+    AlpacaOrderStatus.FILLED,
+    AlpacaOrderStatus.CANCELED,
+    AlpacaOrderStatus.EXPIRED,
+    AlpacaOrderStatus.REJECTED,
+    AlpacaOrderStatus.REPLACED,
+    AlpacaOrderStatus.DONE_FOR_DAY,
+}
+
+
+class AlpacaBracketMixin:
+    """Bracket (entry + take-profit/stop-loss) orders for the daily-picks trader."""
+
+    _client: TradingClient
+    _write_client: TradingClient
+
+    def submit_bracket_buy(
+        self,
+        client_order_id: str,
+        symbol: str,
+        qty: int,
+        limit_price: Decimal,
+        take_profit: Decimal | None,
+        stop_loss: Decimal | None,
+    ) -> BrokerOrder:
+        if take_profit is not None and stop_loss is not None:
+            order_class = OrderClass.BRACKET
+        elif take_profit is not None or stop_loss is not None:
+            order_class = OrderClass.OTO
+        else:
+            order_class = OrderClass.SIMPLE
+        req = LimitOrderRequest(
+            symbol=symbol,
+            qty=qty,
+            side=OrderSide.BUY,
+            type=OrderType.LIMIT,
+            time_in_force=TimeInForce.DAY,
+            limit_price=float(limit_price),
+            client_order_id=client_order_id,
+            order_class=order_class,
+            take_profit=(
+                TakeProfitRequest(limit_price=float(take_profit))
+                if take_profit is not None
+                else None
+            ),
+            stop_loss=StopLossRequest(stop_price=float(stop_loss))
+            if stop_loss is not None
+            else None,
+        )
+        o = _expect(_call(lambda: self._write_client.submit_order(req)), AlpacaOrder)
+        return to_broker_order(o)
+
+    def get_bracket(self, client_order_id: str) -> BracketState | None:
+        try:
+            parent = with_read_retries(
+                lambda: _call(lambda: self._client.get_order_by_client_id(client_order_id))
+            )
+        except BrokerRejectedError as exc:
+            if "404" in str(exc) or "not found" in str(exc).lower():
+                return None
+            raise
+        parent = _expect(parent, AlpacaOrder)
+        nested = _expect(
+            with_read_retries(
+                lambda: _call(
+                    lambda: self._client.get_order_by_id(
+                        parent.id, GetOrderByIdRequest(nested=True)
+                    )
+                )
+            ),
+            AlpacaOrder,
+        )
+        filled_leg: AlpacaOrder | None = None
+        open_legs: list[str] = []
+        for leg in nested.legs or []:
+            if leg.status not in _TERMINAL:
+                open_legs.append(str(leg.id))
+            if (to_decimal_opt(leg.filled_qty) or ZERO) > 0:
+                filled_leg = leg
+        reason = None
+        if filled_leg is not None:
+            reason = (
+                "STOP" if filled_leg.type in {OrderType.STOP, OrderType.STOP_LIMIT} else "TARGET"
+            )
+        return BracketState(
+            entry_broker_id=str(nested.id),
+            entry_status=map_order_status(nested.status),
+            entry_filled_qty=to_decimal_opt(nested.filled_qty) or ZERO,
+            entry_avg_price=to_decimal_opt(nested.filled_avg_price),
+            exit_filled_qty=(to_decimal_opt(filled_leg.filled_qty) or ZERO) if filled_leg else ZERO,
+            exit_avg_price=to_decimal_opt(filled_leg.filled_avg_price) if filled_leg else None,
+            exit_reason=reason,
+            open_leg_ids=tuple(open_legs),
+        )
+
+    def submit_market_sell(self, client_order_id: str, symbol: str, qty: Decimal) -> BrokerOrder:
+        req = MarketOrderRequest(
+            symbol=symbol,
+            qty=float(qty),
+            side=OrderSide.SELL,
+            type=OrderType.MARKET,
+            time_in_force=TimeInForce.DAY,
+            client_order_id=client_order_id,
+        )
+        o = _expect(_call(lambda: self._write_client.submit_order(req)), AlpacaOrder)
+        return to_broker_order(o)
+
+
+class AlpacaBroker(AlpacaBracketMixin):
     def __init__(self, key_id: str, secret: str, mode: TradingMode) -> None:
         if not key_id or not secret:
             raise ValueError(f"Alpaca {mode.value} credentials are not configured")

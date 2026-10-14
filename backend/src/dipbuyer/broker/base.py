@@ -3,11 +3,13 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
+from decimal import Decimal
 from typing import Protocol
 
 from dipbuyer.domain.models import (
     Account,
     AssetInfo,
+    BracketState,
     BrokerOrder,
     Clock,
     OrderIntent,
@@ -39,6 +41,19 @@ class BrokerClient(Protocol):
     def get_order_by_client_id(self, client_order_id: str) -> BrokerOrder | None: ...
     def cancel_order(self, broker_order_id: str) -> None: ...
     def cancel_all_open(self) -> None: ...
+    def submit_bracket_buy(
+        self,
+        client_order_id: str,
+        symbol: str,
+        qty: int,
+        limit_price: Decimal,
+        take_profit: Decimal | None,
+        stop_loss: Decimal | None,
+    ) -> BrokerOrder: ...
+    def get_bracket(self, client_order_id: str) -> BracketState | None: ...
+    def submit_market_sell(
+        self, client_order_id: str, symbol: str, qty: Decimal
+    ) -> BrokerOrder: ...
 
 
 class SubmitFailedError(BrokerError):

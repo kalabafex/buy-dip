@@ -209,6 +209,112 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/picks/day": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Picks Day
+         * @description Picks for ``date`` (default: today in New York, or the latest day with picks).
+         */
+        get: operations["picks_day_api_picks_day_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/picks/days": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Picks Days */
+        get: operations["picks_days_api_picks_days_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/picks/model": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Picks Model */
+        get: operations["picks_model_api_picks_model_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/picks/model/calibrate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Calibrate Now */
+        post: operations["calibrate_now_api_picks_model_calibrate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/picks/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Picks Performance */
+        get: operations["picks_performance_api_picks_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/picks/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Picks Settings */
+        get: operations["get_picks_settings_api_picks_settings_get"];
+        /** Put Picks Settings */
+        put: operations["put_picks_settings_api_picks_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/positions": {
         parameters: {
             query?: never;
@@ -759,6 +865,286 @@ export interface components {
          * @enum {string}
          */
         OrderStatus: "PENDING" | "SUBMITTED" | "PARTIALLY_FILLED" | "FILLED" | "CANCELED" | "EXPIRED" | "REJECTED" | "FAILED";
+        /** PickFamilyOut */
+        PickFamilyOut: {
+            /** Accepted */
+            accepted: boolean;
+            /** Description */
+            description: string;
+            /** Exit Key */
+            exit_key: string;
+            /** Family */
+            family: string;
+            /** Label */
+            label: string;
+            /** Stop Atr */
+            stop_atr: number | null;
+            /** Target Atr */
+            target_atr: number | null;
+            train: components["schemas"]["PickFamilyStats"];
+            validation: components["schemas"]["PickFamilyStats"];
+        };
+        /** PickFamilyStats */
+        PickFamilyStats: {
+            /** Avg Loss */
+            avg_loss: number;
+            /** Avg Win */
+            avg_win: number;
+            /** Mean */
+            mean: number;
+            /** N */
+            n: number;
+            /** Std */
+            std: number;
+            /** T Stat */
+            t_stat: number;
+            /** Win Rate */
+            win_rate: number;
+        };
+        /** PickModelOut */
+        PickModelOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Data End */
+            data_end: string | null;
+            /** Data Start */
+            data_start: string | null;
+            /** Error */
+            error: string | null;
+            /** Families */
+            families: components["schemas"]["PickFamilyOut"][];
+            /** Finished At */
+            finished_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Progress */
+            progress: number;
+            /** Split Date */
+            split_date: string | null;
+            status: components["schemas"]["BacktestStatus"];
+            /** Symbols */
+            symbols: number;
+        };
+        /** PickOut */
+        PickOut: {
+            /** Accepted */
+            accepted: boolean;
+            /** Day Close */
+            day_close: string | null;
+            /** Day High */
+            day_high: string | null;
+            /** Day Low */
+            day_low: string | null;
+            /** Day Open */
+            day_open: string | null;
+            /** Entry Fill Price */
+            entry_fill_price: string | null;
+            /** Entry Filled Qty */
+            entry_filled_qty: string | null;
+            /** Entry Limit */
+            entry_limit: string;
+            /**
+             * Entry Time
+             * Format: date-time
+             */
+            entry_time: string;
+            /** Error */
+            error: string | null;
+            /** Exit Fill Price */
+            exit_fill_price: string | null;
+            /** Exit Filled Qty */
+            exit_filled_qty: string | null;
+            /** Exit Key */
+            exit_key: string;
+            /** Exit Reason */
+            exit_reason: string | null;
+            /**
+             * Exit Time
+             * Format: date-time
+             */
+            exit_time: string;
+            /** Expected Pnl Usd */
+            expected_pnl_usd: string | null;
+            /** Expected Return Pct */
+            expected_return_pct: string;
+            /** Family */
+            family: string;
+            /** Family Description */
+            family_description: string;
+            /** Family Label */
+            family_label: string;
+            /** Family Mean Pct */
+            family_mean_pct: string;
+            /** Features */
+            features: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Mode */
+            mode: string | null;
+            /** Name */
+            name: string;
+            /** Notional Usd */
+            notional_usd: string | null;
+            /** Open Price */
+            open_price: string;
+            /** Plan Exit Price */
+            plan_exit_price: string | null;
+            /** Plan Exit Reason */
+            plan_exit_reason: string | null;
+            /** Plan Return Pct */
+            plan_return_pct: string | null;
+            /** Qty */
+            qty: number | null;
+            /** Rank */
+            rank: number;
+            /** Realized Pnl Usd */
+            realized_pnl_usd: string | null;
+            /** Realized Return Pct */
+            realized_return_pct: string | null;
+            /** Samples */
+            samples: number;
+            /** Sector */
+            sector: string;
+            /**
+             * Session Date
+             * Format: date
+             */
+            session_date: string;
+            /** Skip Reason */
+            skip_reason: string | null;
+            /** Status */
+            status: string;
+            /** Stop Pct */
+            stop_pct: string | null;
+            /** Stop Price */
+            stop_price: string | null;
+            /** Symbol */
+            symbol: string;
+            /** Target Pct */
+            target_pct: string | null;
+            /** Target Price */
+            target_price: string | null;
+            /** Win Rate */
+            win_rate: string;
+        };
+        /** PicksDayOut */
+        PicksDayOut: {
+            calibration_in_progress: components["schemas"]["PickModelOut"] | null;
+            /** Entry Time */
+            entry_time: string | null;
+            /** Exit Time */
+            exit_time: string | null;
+            /** Generated */
+            generated: boolean;
+            /** Is Trading Day */
+            is_trading_day: boolean;
+            model: components["schemas"]["PickModelOut"] | null;
+            /** Picks */
+            picks: components["schemas"]["PickOut"][];
+            /** Plan Return Avg Pct */
+            plan_return_avg_pct: string | null;
+            /** Realized Pnl Usd */
+            realized_pnl_usd: string | null;
+            /**
+             * Session Date
+             * Format: date
+             */
+            session_date: string;
+            settings: components["schemas"]["PicksSettingsOut"];
+        };
+        /** PicksDaySummary */
+        PicksDaySummary: {
+            /** Expected Avg Pct */
+            expected_avg_pct: string;
+            /** Picks */
+            picks: number;
+            /** Plan Return Avg Pct */
+            plan_return_avg_pct: string | null;
+            /** Plan Wins */
+            plan_wins: number;
+            /** Realized Pnl Usd */
+            realized_pnl_usd: string | null;
+            /** Realized Wins */
+            realized_wins: number;
+            /**
+             * Session Date
+             * Format: date
+             */
+            session_date: string;
+            /** Traded */
+            traded: number;
+        };
+        /** PicksPerformanceOut */
+        PicksPerformanceOut: {
+            /** By Family */
+            by_family: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /** Days */
+            days: number;
+            /** Expected Avg Pct */
+            expected_avg_pct: string | null;
+            /** Picks */
+            picks: number;
+            /** Plan Avg Pct */
+            plan_avg_pct: string | null;
+            /** Plan Evaluated */
+            plan_evaluated: number;
+            /** Plan Win Rate */
+            plan_win_rate: number | null;
+            /** Realized Pnl Usd */
+            realized_pnl_usd: string;
+            /** Realized Win Rate */
+            realized_win_rate: number | null;
+            /** Series */
+            series: components["schemas"]["PicksPerformancePoint"][];
+            /** Traded */
+            traded: number;
+        };
+        /** PicksPerformancePoint */
+        PicksPerformancePoint: {
+            /** Plan Cum Pct */
+            plan_cum_pct: string;
+            /** Realized Cum Usd */
+            realized_cum_usd: string;
+            /**
+             * Session Date
+             * Format: date
+             */
+            session_date: string;
+        };
+        /** PicksSettingsIn */
+        PicksSettingsIn: {
+            /** Autotrade */
+            autotrade: boolean;
+            /** Min Expected Pct */
+            min_expected_pct: number | string;
+            /** Notional Usd */
+            notional_usd: number | string;
+        };
+        /** PicksSettingsOut */
+        PicksSettingsOut: {
+            /** Autotrade */
+            autotrade: boolean;
+            /** Min Expected Pct */
+            min_expected_pct: string;
+            /** Notional Usd */
+            notional_usd: string;
+            trading_mode: components["schemas"]["TradingMode"];
+        };
         /** PositionOut */
         PositionOut: {
             /** Avg Entry Price */
@@ -1609,6 +1995,181 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    picks_day_api_picks_day_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PicksDayOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    picks_days_api_picks_days_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PicksDaySummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    picks_model_api_picks_model_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PickModelOut"] | null;
+                };
+            };
+        };
+    };
+    calibrate_now_api_picks_model_calibrate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PickModelOut"];
+                };
+            };
+        };
+    };
+    picks_performance_api_picks_performance_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PicksPerformanceOut"];
+                };
+            };
+        };
+    };
+    get_picks_settings_api_picks_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PicksSettingsOut"];
+                };
+            };
+        };
+    };
+    put_picks_settings_api_picks_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PicksSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PicksSettingsOut"];
                 };
             };
             /** @description Validation Error */

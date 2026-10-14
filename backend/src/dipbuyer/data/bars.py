@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+from collections.abc import Sequence
 from decimal import Decimal
 
 from sqlalchemy.orm import Session
@@ -64,3 +65,39 @@ class BarService:
         """Return (completed bars, latest trade price)."""
         bars = self.completed_bars(session, symbol, today)
         return bars, self.md.get_latest_trade(symbol)
+
+    def ensure_cached_many(
+        self, session: Session, symbols: Sequence[str], start: dt.date, end: dt.date
+    ) -> int:
+        """Batch version of ``ensure_cached`` using multi-symbol requests.
+
+        Symbols are grouped by the date range they are missing so each group is one
+        request per 100 symbols.
+        """
+        sessions = sessions_between(start, end)
+        if not sessions or not symbols:
+            return 0
+        first, last = sessions[0], sessions[-1]
+        ranges = repo.bar_date_ranges(session, symbols)
+        groups: dict[tuple[dt.date, dt.date], list[str]] = {}
+        for sym in symbols:
+            rng = ranges.get(sym)
+            if rng is None:
+                if self._head_checked.get(sym) is None or start < self._head_checked[sym]:
+                    groups.setdefault((start, end), []).append(sym)
+                    self._head_checked[sym] = start
+                continue
+            lo, hi = rng
+            if first < lo and (sym not in self._head_checked or start < self._head_checked[sym]):
+                self._head_checked[sym] = start
+                groups.setdefault((start, lo - dt.timedelta(days=1)), []).append(sym)
+            if hi < last:
+                groups.setdefault((hi + dt.timedelta(days=1), end), []).append(sym)
+        fetched = 0
+        for (g_start, g_end), syms in groups.items():
+            for bars in self.md.get_daily_bars_multi(syms, g_start, g_end).values():
+                fetched += repo.upsert_bars(session, bars)
+        if fetched:
+            log.info("cached bars", extra={"symbols": len(symbols), "count": fetched})
+        session.flush()
+        return fetched

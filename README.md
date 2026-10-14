@@ -4,6 +4,11 @@ A personal, single-user, rules-based "buy the dip" system. You configure rules i
 dashboard. A separate worker evaluates them during US market hours and places **limit buy**
 orders through Alpaca. It runs in **paper trading** mode by default.
 
+**Daily picks:** every trading day at 09:35 ET the worker publishes 5 intraday S&P 500
+picks with an exact plan (limit buy, profit target, stop loss, exit by 15:55 ET) and the
+history behind each one; with auto-trade on it trades them on the paper account and records
+the results. See [docs/daily-picks.md](docs/daily-picks.md).
+
 * `backend/`: Python 3.12+ (FastAPI API, APScheduler worker, SQLAlchemy/Alembic, alpaca-py)
 * `frontend/`: React + TypeScript (Vite, TanStack Query, Tailwind, lightweight-charts)
 * `docker-compose.yml`: `db`, `api`, `worker`, `web`

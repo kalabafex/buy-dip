@@ -923,6 +923,987 @@
         "title": "OrderStatus",
         "type": "string"
       },
+      "PickFamilyOut": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "exit_key": {
+            "title": "Exit Key",
+            "type": "string"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "stop_atr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Atr"
+          },
+          "target_atr": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Atr"
+          },
+          "train": {
+            "$ref": "#/components/schemas/PickFamilyStats"
+          },
+          "validation": {
+            "$ref": "#/components/schemas/PickFamilyStats"
+          }
+        },
+        "required": [
+          "family",
+          "label",
+          "description",
+          "exit_key",
+          "target_atr",
+          "stop_atr",
+          "accepted",
+          "train",
+          "validation"
+        ],
+        "title": "PickFamilyOut",
+        "type": "object"
+      },
+      "PickFamilyStats": {
+        "properties": {
+          "avg_loss": {
+            "title": "Avg Loss",
+            "type": "number"
+          },
+          "avg_win": {
+            "title": "Avg Win",
+            "type": "number"
+          },
+          "mean": {
+            "title": "Mean",
+            "type": "number"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "std": {
+            "title": "Std",
+            "type": "number"
+          },
+          "t_stat": {
+            "title": "T Stat",
+            "type": "number"
+          },
+          "win_rate": {
+            "title": "Win Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "n",
+          "mean",
+          "win_rate",
+          "avg_win",
+          "avg_loss",
+          "std",
+          "t_stat"
+        ],
+        "title": "PickFamilyStats",
+        "type": "object"
+      },
+      "PickModelOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data End"
+          },
+          "data_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Start"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "families": {
+            "items": {
+              "$ref": "#/components/schemas/PickFamilyOut"
+            },
+            "title": "Families",
+            "type": "array"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "integer"
+          },
+          "split_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Split Date"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BacktestStatus"
+          },
+          "symbols": {
+            "title": "Symbols",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "progress",
+          "data_start",
+          "data_end",
+          "split_date",
+          "symbols",
+          "families",
+          "error",
+          "created_at",
+          "finished_at"
+        ],
+        "title": "PickModelOut",
+        "type": "object"
+      },
+      "PickOut": {
+        "properties": {
+          "accepted": {
+            "title": "Accepted",
+            "type": "boolean"
+          },
+          "day_close": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Close"
+          },
+          "day_high": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day High"
+          },
+          "day_low": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Low"
+          },
+          "day_open": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Open"
+          },
+          "entry_fill_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Fill Price"
+          },
+          "entry_filled_qty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Filled Qty"
+          },
+          "entry_limit": {
+            "title": "Entry Limit",
+            "type": "string"
+          },
+          "entry_time": {
+            "format": "date-time",
+            "title": "Entry Time",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "exit_fill_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Fill Price"
+          },
+          "exit_filled_qty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Filled Qty"
+          },
+          "exit_key": {
+            "title": "Exit Key",
+            "type": "string"
+          },
+          "exit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Reason"
+          },
+          "exit_time": {
+            "format": "date-time",
+            "title": "Exit Time",
+            "type": "string"
+          },
+          "expected_pnl_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Pnl Usd"
+          },
+          "expected_return_pct": {
+            "title": "Expected Return Pct",
+            "type": "string"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "family_description": {
+            "title": "Family Description",
+            "type": "string"
+          },
+          "family_label": {
+            "title": "Family Label",
+            "type": "string"
+          },
+          "family_mean_pct": {
+            "title": "Family Mean Pct",
+            "type": "string"
+          },
+          "features": {
+            "additionalProperties": true,
+            "title": "Features",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mode"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notional_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notional Usd"
+          },
+          "open_price": {
+            "title": "Open Price",
+            "type": "string"
+          },
+          "plan_exit_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Exit Price"
+          },
+          "plan_exit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Exit Reason"
+          },
+          "plan_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Return Pct"
+          },
+          "qty": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Qty"
+          },
+          "rank": {
+            "title": "Rank",
+            "type": "integer"
+          },
+          "realized_pnl_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realized Pnl Usd"
+          },
+          "realized_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realized Return Pct"
+          },
+          "samples": {
+            "title": "Samples",
+            "type": "integer"
+          },
+          "sector": {
+            "title": "Sector",
+            "type": "string"
+          },
+          "session_date": {
+            "format": "date",
+            "title": "Session Date",
+            "type": "string"
+          },
+          "skip_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skip Reason"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "stop_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Pct"
+          },
+          "stop_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Price"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "target_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Pct"
+          },
+          "target_price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Price"
+          },
+          "win_rate": {
+            "title": "Win Rate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "session_date",
+          "rank",
+          "symbol",
+          "name",
+          "sector",
+          "family",
+          "family_label",
+          "family_description",
+          "exit_key",
+          "accepted",
+          "features",
+          "open_price",
+          "entry_limit",
+          "target_price",
+          "stop_price",
+          "target_pct",
+          "stop_pct",
+          "entry_time",
+          "exit_time",
+          "expected_return_pct",
+          "win_rate",
+          "samples",
+          "family_mean_pct",
+          "qty",
+          "notional_usd",
+          "expected_pnl_usd",
+          "status",
+          "skip_reason",
+          "mode",
+          "entry_filled_qty",
+          "entry_fill_price",
+          "exit_filled_qty",
+          "exit_fill_price",
+          "exit_reason",
+          "realized_return_pct",
+          "realized_pnl_usd",
+          "plan_return_pct",
+          "plan_exit_reason",
+          "plan_exit_price",
+          "day_open",
+          "day_high",
+          "day_low",
+          "day_close",
+          "error"
+        ],
+        "title": "PickOut",
+        "type": "object"
+      },
+      "PicksDayOut": {
+        "properties": {
+          "calibration_in_progress": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PickModelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entry_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Time"
+          },
+          "exit_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exit Time"
+          },
+          "generated": {
+            "title": "Generated",
+            "type": "boolean"
+          },
+          "is_trading_day": {
+            "title": "Is Trading Day",
+            "type": "boolean"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PickModelOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "picks": {
+            "items": {
+              "$ref": "#/components/schemas/PickOut"
+            },
+            "title": "Picks",
+            "type": "array"
+          },
+          "plan_return_avg_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Return Avg Pct"
+          },
+          "realized_pnl_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realized Pnl Usd"
+          },
+          "session_date": {
+            "format": "date",
+            "title": "Session Date",
+            "type": "string"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/PicksSettingsOut"
+          }
+        },
+        "required": [
+          "session_date",
+          "is_trading_day",
+          "entry_time",
+          "exit_time",
+          "generated",
+          "picks",
+          "plan_return_avg_pct",
+          "realized_pnl_usd",
+          "settings",
+          "model",
+          "calibration_in_progress"
+        ],
+        "title": "PicksDayOut",
+        "type": "object"
+      },
+      "PicksDaySummary": {
+        "properties": {
+          "expected_avg_pct": {
+            "title": "Expected Avg Pct",
+            "type": "string"
+          },
+          "picks": {
+            "title": "Picks",
+            "type": "integer"
+          },
+          "plan_return_avg_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Return Avg Pct"
+          },
+          "plan_wins": {
+            "title": "Plan Wins",
+            "type": "integer"
+          },
+          "realized_pnl_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realized Pnl Usd"
+          },
+          "realized_wins": {
+            "title": "Realized Wins",
+            "type": "integer"
+          },
+          "session_date": {
+            "format": "date",
+            "title": "Session Date",
+            "type": "string"
+          },
+          "traded": {
+            "title": "Traded",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_date",
+          "picks",
+          "traded",
+          "expected_avg_pct",
+          "plan_return_avg_pct",
+          "plan_wins",
+          "realized_pnl_usd",
+          "realized_wins"
+        ],
+        "title": "PicksDaySummary",
+        "type": "object"
+      },
+      "PicksPerformanceOut": {
+        "properties": {
+          "by_family": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "By Family",
+            "type": "object"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "expected_avg_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Avg Pct"
+          },
+          "picks": {
+            "title": "Picks",
+            "type": "integer"
+          },
+          "plan_avg_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Avg Pct"
+          },
+          "plan_evaluated": {
+            "title": "Plan Evaluated",
+            "type": "integer"
+          },
+          "plan_win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Win Rate"
+          },
+          "realized_pnl_usd": {
+            "title": "Realized Pnl Usd",
+            "type": "string"
+          },
+          "realized_win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realized Win Rate"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/PicksPerformancePoint"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "traded": {
+            "title": "Traded",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days",
+          "picks",
+          "plan_evaluated",
+          "plan_win_rate",
+          "plan_avg_pct",
+          "expected_avg_pct",
+          "traded",
+          "realized_win_rate",
+          "realized_pnl_usd",
+          "by_family",
+          "series"
+        ],
+        "title": "PicksPerformanceOut",
+        "type": "object"
+      },
+      "PicksPerformancePoint": {
+        "properties": {
+          "plan_cum_pct": {
+            "title": "Plan Cum Pct",
+            "type": "string"
+          },
+          "realized_cum_usd": {
+            "title": "Realized Cum Usd",
+            "type": "string"
+          },
+          "session_date": {
+            "format": "date",
+            "title": "Session Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_date",
+          "plan_cum_pct",
+          "realized_cum_usd"
+        ],
+        "title": "PicksPerformancePoint",
+        "type": "object"
+      },
+      "PicksSettingsIn": {
+        "properties": {
+          "autotrade": {
+            "title": "Autotrade",
+            "type": "boolean"
+          },
+          "min_expected_pct": {
+            "anyOf": [
+              {
+                "maximum": 5.0,
+                "minimum": -5.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Min Expected Pct"
+          },
+          "notional_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000000.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Notional Usd"
+          }
+        },
+        "required": [
+          "autotrade",
+          "notional_usd",
+          "min_expected_pct"
+        ],
+        "title": "PicksSettingsIn",
+        "type": "object"
+      },
+      "PicksSettingsOut": {
+        "properties": {
+          "autotrade": {
+            "title": "Autotrade",
+            "type": "boolean"
+          },
+          "min_expected_pct": {
+            "title": "Min Expected Pct",
+            "type": "string"
+          },
+          "notional_usd": {
+            "title": "Notional Usd",
+            "type": "string"
+          },
+          "trading_mode": {
+            "$ref": "#/components/schemas/TradingMode"
+          }
+        },
+        "required": [
+          "autotrade",
+          "notional_usd",
+          "min_expected_pct",
+          "trading_mode"
+        ],
+        "title": "PicksSettingsOut",
+        "type": "object"
+      },
       "PositionOut": {
         "properties": {
           "avg_entry_price": {
@@ -2911,6 +3892,237 @@
         "summary": "List Orders",
         "tags": [
           "activity"
+        ]
+      }
+    },
+    "/api/picks/day": {
+      "get": {
+        "description": "Picks for ``date`` (default: today in New York, or the latest day with picks).",
+        "operationId": "picks_day_api_picks_day_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PicksDayOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Picks Day",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
+    "/api/picks/days": {
+      "get": {
+        "operationId": "picks_days_api_picks_days_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 60,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PicksDaySummary"
+                  },
+                  "title": "Response Picks Days Api Picks Days Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Picks Days",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
+    "/api/picks/model": {
+      "get": {
+        "operationId": "picks_model_api_picks_model_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PickModelOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Picks Model Api Picks Model Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Picks Model",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
+    "/api/picks/model/calibrate": {
+      "post": {
+        "operationId": "calibrate_now_api_picks_model_calibrate_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickModelOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Calibrate Now",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
+    "/api/picks/performance": {
+      "get": {
+        "operationId": "picks_performance_api_picks_performance_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PicksPerformanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Picks Performance",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
+    "/api/picks/settings": {
+      "get": {
+        "operationId": "get_picks_settings_api_picks_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PicksSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Picks Settings",
+        "tags": [
+          "picks"
+        ]
+      },
+      "put": {
+        "operationId": "put_picks_settings_api_picks_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PicksSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PicksSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Put Picks Settings",
+        "tags": [
+          "picks"
         ]
       }
     },

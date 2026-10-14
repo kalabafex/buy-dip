@@ -72,6 +72,7 @@ def db_engine(pg_url: str) -> Iterator[Engine]:
 
 
 TABLES = (
+    "daily_picks, pick_models, recommendations, "
     "position_snapshots, account_snapshots, evaluations, order_intents, dip_cycles, "
     "backtests, bars_daily, audit_log, rules"
 )
@@ -85,6 +86,7 @@ def sf(db_engine: Engine) -> Iterator[sessionmaker[Session]]:
             text(
                 "UPDATE global_settings SET trading_mode='PAPER', kill_switch=false, "
                 "kill_switch_cancel_pending=false, max_daily_spend_usd=500, "
+                "picks_autotrade=false, picks_notional_usd=1000, picks_min_expected_pct=0.05, "
                 "max_weekly_spend_usd=1500, evaluation_interval_minutes=5, "
                 "open_exclusion_minutes=15, close_exclusion_minutes=10"
             )

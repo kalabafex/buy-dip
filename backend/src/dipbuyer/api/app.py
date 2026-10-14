@@ -15,6 +15,7 @@ from dipbuyer.api.routers import (
     activity,
     auth,
     backtests,
+    picks,
     recommendations,
     rules,
     settings,
@@ -114,7 +115,7 @@ def create_app(deps: AppDeps | None = None) -> FastAPI:
         allow_headers=["Content-Type"],
     )
     api = APIRouter(prefix="/api")
-    for r in (auth, system, rules, settings, activity, backtests, recommendations):
+    for r in (auth, system, rules, settings, activity, backtests, recommendations, picks):
         api.include_router(r.router)
     app.include_router(api)
     return app

@@ -19,6 +19,15 @@ init-env:
 seed-rules *ARGS:
     docker compose exec api python -m dipbuyer.cli seed-rules {{ARGS}}
 
+# download the latest S&P 500 constituents into the bundled list (then `just up` to rebuild)
+[working-directory: 'backend']
+refresh-universe:
+    uv run python -m dipbuyer.cli refresh-universe
+
+# queue a recalibration of the daily-picks setups
+calibrate-picks:
+    docker compose exec api python -c "from dipbuyer.persistence.db import get_engine, make_session_factory; from dipbuyer.worker.picks_trader import queue_calibration; sf = make_session_factory(get_engine()); s = sf(); queue_calibration(s); s.commit(); print('queued')"
+
 # validate .env (required secrets, quoting, duplicates)
 [working-directory: 'backend']
 check-env:

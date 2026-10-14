@@ -21,6 +21,7 @@ from dipbuyer.logging_setup import setup_logging
 from dipbuyer.persistence.db import get_engine, make_session_factory
 from dipbuyer.worker.backtest_runner import run_queued
 from dipbuyer.worker.loop import TradingLoop
+from dipbuyer.worker.picks_trader import PicksTrader
 from dipbuyer.worker.recommendation_runner import run_queued as run_recommendations
 
 log = logging.getLogger("dipbuyer.worker")
@@ -63,6 +64,28 @@ def main() -> None:
         dry_run=env.dry_run,
     )
 
+    picks = PicksTrader(
+        session_factory=sf,
+        db_engine=engine,
+        broker_factory=broker_factory,  # picks only ever trade with PAPER
+        market_data_factory=lambda mode: bar_service_factory(mode).md,
+        bar_service_factory=bar_service_factory,
+        notifier=notifier,
+    )
+
+    def picks_job() -> None:
+        try:
+            picks.tick()
+        except Exception as exc:
+            log.exception("picks tick failed")
+            notifier.send("Worker exception", f"daily picks: {exc}", priority="high")
+
+    def calibration_job() -> None:
+        try:
+            picks.run_calibrations()
+        except Exception:
+            log.exception("picks calibration runner failed")
+
     def trading_job() -> None:
         try:
             outcome = loop.tick()
@@ -100,6 +123,10 @@ def main() -> None:
         max_instances=1,
     )
     sched.add_job(backtest_job, "interval", seconds=10, id="backtests", max_instances=1)
+    sched.add_job(picks_job, "interval", minutes=1, id="picks", max_instances=1, coalesce=True)
+    sched.add_job(
+        calibration_job, "interval", seconds=30, id="calibration", max_instances=1, coalesce=True
+    )
     sched.add_job(recommendation_job, "interval", seconds=10, id="recommendations", max_instances=1)
 
     def shutdown(signum: int, _frame: FrameType | None) -> None:

@@ -278,25 +278,56 @@ def bar_date_range(session: Session, symbol: str) -> tuple[dt.date | None, dt.da
     return row[0], row[1]
 
 
-def upsert_bars(session: Session, bars: Sequence[Bar]) -> int:
-    if not bars:
-        return 0
-    values = [
-        {
-            "symbol": b.symbol,
-            "session_date": b.session_date,
-            "open": b.open,
-            "high": b.high,
-            "low": b.low,
-            "close": b.close,
-            "volume": b.volume,
-        }
-        for b in bars
-    ]
-    stmt = insert(BarDailyRow).values(values)
-    stmt = stmt.on_conflict_do_update(
-        constraint="uq_bars_symbol_date",
-        set_={k: stmt.excluded[k] for k in ("open", "high", "low", "close", "volume")},
+def upsert_bars(session: Session, bars: Sequence[Bar], chunk: int = 2000) -> int:
+    """Insert or update bars, in chunks (Postgres caps parameters per statement)."""
+    for i in range(0, len(bars), chunk):
+        values = [
+            {
+                "symbol": b.symbol,
+                "session_date": b.session_date,
+                "open": b.open,
+                "high": b.high,
+                "low": b.low,
+                "close": b.close,
+                "volume": b.volume,
+            }
+            for b in bars[i : i + chunk]
+        ]
+        stmt = insert(BarDailyRow).values(values)
+        stmt = stmt.on_conflict_do_update(
+            constraint="uq_bars_symbol_date",
+            set_={k: stmt.excluded[k] for k in ("open", "high", "low", "close", "volume")},
+        )
+        session.execute(stmt)
+    return len(bars)
+
+
+def bar_date_ranges(session: Session, symbols: Sequence[str]) -> dict[str, tuple[dt.date, dt.date]]:
+    rows = session.execute(
+        select(
+            BarDailyRow.symbol,
+            func.min(BarDailyRow.session_date),
+            func.max(BarDailyRow.session_date),
+        )
+        .where(BarDailyRow.symbol.in_(list(symbols)))
+        .group_by(BarDailyRow.symbol)
+    ).all()
+    return {r[0]: (r[1], r[2]) for r in rows}
+
+
+def get_bars_many(
+    session: Session, symbols: Sequence[str], start: dt.date, end: dt.date
+) -> dict[str, list[Bar]]:
+    stmt = (
+        select(BarDailyRow)
+        .where(
+            BarDailyRow.symbol.in_(list(symbols)),
+            BarDailyRow.session_date >= start,
+            BarDailyRow.session_date <= end,
+        )
+        .order_by(BarDailyRow.symbol, BarDailyRow.session_date)
     )
-    session.execute(stmt)
-    return len(values)
+    out: dict[str, list[Bar]] = {}
+    for r in session.scalars(stmt):
+        out.setdefault(r.symbol, []).append(bar_from_row(r))
+    return out

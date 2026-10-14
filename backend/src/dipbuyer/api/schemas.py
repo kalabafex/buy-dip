@@ -344,3 +344,151 @@ class RecommendationOut(BaseModel):
 class RecommendationApplyIn(BaseModel):
     key: str
     enabled: bool = False
+
+
+# --- daily picks ---------------------------------------------------------------------
+
+
+class PickOut(BaseModel):
+    id: uuid.UUID
+    session_date: dt.date
+    rank: int
+    symbol: str
+    name: str
+    sector: str
+    family: str
+    family_label: str
+    family_description: str
+    exit_key: str
+    accepted: bool
+    features: dict[str, Any]
+    open_price: Decimal
+    entry_limit: Decimal
+    target_price: Decimal | None
+    stop_price: Decimal | None
+    target_pct: Decimal | None
+    """Target distance from the entry limit, in percent."""
+    stop_pct: Decimal | None
+    entry_time: dt.datetime
+    exit_time: dt.datetime
+    expected_return_pct: Decimal
+    win_rate: Decimal
+    samples: int
+    family_mean_pct: Decimal
+    qty: int | None
+    notional_usd: Decimal | None
+    expected_pnl_usd: Decimal | None
+    status: str
+    skip_reason: str | None
+    mode: str | None
+    entry_filled_qty: Decimal | None
+    entry_fill_price: Decimal | None
+    exit_filled_qty: Decimal | None
+    exit_fill_price: Decimal | None
+    exit_reason: str | None
+    realized_return_pct: Decimal | None
+    realized_pnl_usd: Decimal | None
+    plan_return_pct: Decimal | None
+    plan_exit_reason: str | None
+    plan_exit_price: Decimal | None
+    day_open: Decimal | None
+    day_high: Decimal | None
+    day_low: Decimal | None
+    day_close: Decimal | None
+    error: str | None
+
+
+class PicksSettingsOut(BaseModel):
+    autotrade: bool
+    notional_usd: Decimal
+    min_expected_pct: Decimal
+    trading_mode: TradingMode
+
+
+class PicksSettingsIn(BaseModel):
+    autotrade: bool
+    notional_usd: Annotated[Decimal, Field(gt=0, le=1_000_000)]
+    min_expected_pct: Annotated[Decimal, Field(ge=-5, le=5)]
+
+
+class PickFamilyStats(BaseModel):
+    n: int
+    mean: float
+    win_rate: float
+    avg_win: float
+    avg_loss: float
+    std: float
+    t_stat: float
+
+
+class PickFamilyOut(BaseModel):
+    family: str
+    label: str
+    description: str
+    exit_key: str
+    target_atr: float | None
+    stop_atr: float | None
+    accepted: bool
+    train: PickFamilyStats
+    validation: PickFamilyStats
+
+
+class PickModelOut(BaseModel):
+    id: uuid.UUID
+    status: BacktestStatus
+    progress: int
+    data_start: dt.date | None
+    data_end: dt.date | None
+    split_date: dt.date | None
+    symbols: int
+    families: list[PickFamilyOut]
+    error: str | None
+    created_at: dt.datetime
+    finished_at: dt.datetime | None
+
+
+class PicksDayOut(BaseModel):
+    session_date: dt.date
+    is_trading_day: bool
+    entry_time: dt.datetime | None
+    exit_time: dt.datetime | None
+    generated: bool
+    picks: list[PickOut]
+    plan_return_avg_pct: Decimal | None
+    realized_pnl_usd: Decimal | None
+    settings: PicksSettingsOut
+    model: PickModelOut | None
+    """Latest finished calibration (null until the first one completes)."""
+    calibration_in_progress: PickModelOut | None
+
+
+class PicksDaySummary(BaseModel):
+    session_date: dt.date
+    picks: int
+    traded: int
+    expected_avg_pct: Decimal
+    plan_return_avg_pct: Decimal | None
+    plan_wins: int
+    realized_pnl_usd: Decimal | None
+    realized_wins: int
+
+
+class PicksPerformancePoint(BaseModel):
+    session_date: dt.date
+    plan_cum_pct: Decimal
+    """Cumulative sum of the day's average plan return (equal weight per pick)."""
+    realized_cum_usd: Decimal
+
+
+class PicksPerformanceOut(BaseModel):
+    days: int
+    picks: int
+    plan_evaluated: int
+    plan_win_rate: float | None
+    plan_avg_pct: Decimal | None
+    expected_avg_pct: Decimal | None
+    traded: int
+    realized_win_rate: float | None
+    realized_pnl_usd: Decimal
+    by_family: dict[str, dict[str, Any]]
+    series: list[PicksPerformancePoint]
