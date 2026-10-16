@@ -19,6 +19,7 @@
     --sidebar: 0 0% 100%;
     --sidebar-foreground: 240 6% 26%;
     --primary: 213 67% 50%;
+    --chart-hold: #eb6834; /* chart series2 (buy & hold), see charts/theme.ts */
     --primary-foreground: 0 0% 100%;
     --secondary: 240 5% 94%;
     --secondary-foreground: 240 6% 12%;
@@ -53,6 +54,7 @@
     --sidebar: 240 5% 7.5%;
     --sidebar-foreground: 240 5% 75%;
     --primary: 213 76% 56%;
+    --chart-hold: #d95926;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 4% 15%;
     --secondary-foreground: 240 5% 94%;

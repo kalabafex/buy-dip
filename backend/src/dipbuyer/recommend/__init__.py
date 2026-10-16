@@ -293,11 +293,13 @@ def _full_period(
         "end": res.end_date.isoformat(),
         "rule": res.rule.to_json(),
         "baseline": res.baseline.to_json(),
+        "hold": res.hold.to_json(),
         "profit_curve": [
             {
                 "date": p["date"],
                 "rule": str((D(p["rule"]) - cash).quantize(D("0.01"))),
                 "baseline": str((D(p["baseline"]) - cash).quantize(D("0.01"))),
+                "hold": str((D(p["hold"]) - cash).quantize(D("0.01"))),
             }
             for p in points
         ],

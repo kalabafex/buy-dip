@@ -32,33 +32,52 @@ function paramsSummary(p: RecItem["params"]): string {
 /** Full-period result: rule vs DCA return side by side (rule can win windows yet trail here). */
 function FullPeriod({ item }: { item: RecItem }) {
   const fp = item.full_period;
-  const ruleRet = Number(fp.rule.return_pct);
-  const dcaRet = Number(fp.baseline.return_pct);
   const last = fp.profit_curve[fp.profit_curve.length - 1];
+  const tiles = [
+    {
+      label: "Rule",
+      ret: Number(fp.rule.return_pct),
+      profit: last?.rule,
+      swatch: "bg-primary",
+      accent: true,
+    },
+    {
+      label: "Monthly DCA",
+      ret: Number(fp.baseline.return_pct),
+      profit: last?.baseline,
+      swatch: "bg-muted-foreground/60",
+      accent: false,
+    },
+    ...(fp.hold
+      ? [
+          {
+            label: "Buy & hold",
+            ret: Number(fp.hold.return_pct),
+            profit: last?.hold ?? null,
+            swatch: "bg-[var(--chart-hold)]",
+            accent: false,
+          },
+        ]
+      : []),
+  ];
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {[
-        { label: "Rule", ret: ruleRet, profit: last?.rule, accent: true },
-        { label: "Monthly DCA", ret: dcaRet, profit: last?.baseline, accent: false },
-      ].map((x) => (
+    <div className={cn("grid gap-2", tiles.length === 3 ? "grid-cols-3" : "grid-cols-2")}>
+      {tiles.map((x) => (
         <div
           key={x.label}
           className={cn(
-            "rounded-lg border px-3 py-2",
+            "min-w-0 rounded-lg border px-3 py-2",
             x.accent ? "border-primary/30 bg-primary/[0.05]" : "bg-muted/30",
           )}
         >
-          <div className="flex items-center gap-1.5 text-2xs font-medium text-muted-foreground">
-            <span
-              aria-hidden
-              className={cn("h-0.5 w-3 rounded-full", x.accent ? "bg-primary" : "bg-muted-foreground/60")}
-            />
+          <div className="flex items-center gap-1.5 truncate text-2xs font-medium text-muted-foreground">
+            <span aria-hidden className={cn("h-0.5 w-3 shrink-0 rounded-full", x.swatch)} />
             {x.label}
           </div>
           <Signed value={x.ret} className="block text-lg font-semibold tracking-tight">
             {fmtPct(x.ret, 1, true)}
           </Signed>
-          <div className="num text-2xs text-muted-foreground">
+          <div className="num truncate text-2xs text-muted-foreground">
             {fmtUsdSigned(x.profit, { short: true })} profit
           </div>
         </div>
@@ -212,6 +231,7 @@ export function RecommendationCard({
             points={item.full_period.profit_curve}
             ruleLabel="Rule profit"
             baselineLabel="DCA profit"
+            holdLabel="Buy & hold profit"
             format={(v) => fmtUsdSigned(v, { short: true })}
             zeroLine
             interactive={false}
@@ -219,7 +239,8 @@ export function RecommendationCard({
           />
           <p className="text-2xs leading-4 text-muted-foreground">
             Profit at {fmtUsdShort(budgetPerDip)} per dip with a {fmtUsdShort(maxPosition)} position cap,
-            versus monthly DCA investing the same dollars. Returns are on invested dollars.
+            versus monthly DCA and buying the stock on day one and holding it, both with the same dollars.
+            Returns are on invested dollars.
           </p>
         </div>
       </div>

@@ -94,7 +94,7 @@ export function BacktestResultView({
       <Card>
         {header}
         <CardContent className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <MetricsComparison rule={r.rule} baseline={r.baseline} />
+          <MetricsComparison rule={r.rule} baseline={r.baseline} hold={r.hold} />
           <div className="grid content-start gap-2">
             <div className="text-2xs font-medium uppercase tracking-wider text-muted-foreground">
               Equity over time
@@ -103,6 +103,7 @@ export function BacktestResultView({
               points={r.equity_curve}
               ruleLabel="Rule equity"
               baselineLabel="Monthly DCA equity"
+              holdLabel="Buy & hold equity"
               format={(v) => fmtUsdShort(v)}
             />
           </div>

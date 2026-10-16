@@ -8,7 +8,8 @@ Model (spec §13):
   otherwise it expires unfilled (day order) and the provisional tier mark is removed;
 * caps, cooldowns and cycles are enforced exactly as in the live loop;
 * baseline: the same total dollars the rule deployed, split into equal buys at the open
-  of the first session of each month in the range.
+  of the first session of each month in the range;
+* hold ("normal stock return"): the same total dollars bought at once at the first open.
 """
 
 from __future__ import annotations
@@ -121,6 +122,8 @@ class BacktestResult:
     starting_cash: Decimal
     rule: Metrics
     baseline: Metrics
+    hold: Metrics
+    """Buy and hold: the same dollars as the rule, all bought at the first session's open."""
     equity_curve: list[dict[str, str]] = field(default_factory=list[dict[str, str]])
     trades: list[Trade] = field(default_factory=list[Trade])
     decisions: dict[str, int] = field(default_factory=dict[str, int])
@@ -133,6 +136,7 @@ class BacktestResult:
             "starting_cash": str(self.starting_cash),
             "rule": self.rule.to_json(),
             "baseline": self.baseline.to_json(),
+            "hold": self.hold.to_json(),
             "equity_curve": self.equity_curve,
             "trades": [t.to_json() for t in self.trades],
             "decisions": self.decisions,
@@ -351,13 +355,21 @@ def run_backtest(
         b_equity.append(b_cash + b_qty * bars[i].close)
     baseline_metrics = _metrics(b_invested, b_qty, last_close, b_equity, b_buys)
 
+    # Buy and hold: the rule's total dollars invested at once at the first open.
+    first = bars[idxs[0]]
+    h_qty = floor_qty(invested / first.open) if invested > 0 else ZERO
+    h_cost = h_qty * first.open
+    h_equity = [starting_cash - h_cost + h_qty * bars[i].close for i in idxs]
+    hold_metrics = _metrics(h_cost, h_qty, last_close, h_equity, 1 if h_qty > 0 else 0)
+
     curve = [
         {
             "date": d.isoformat(),
             "rule": str(e.quantize(CENT)),
             "baseline": str(be.quantize(CENT)),
+            "hold": str(he.quantize(CENT)),
         }
-        for d, e, be in zip(curve_dates, equity, b_equity, strict=True)
+        for d, e, be, he in zip(curve_dates, equity, b_equity, h_equity, strict=True)
     ]
     return BacktestResult(
         symbol=rule.symbol,
@@ -366,6 +378,7 @@ def run_backtest(
         starting_cash=starting_cash,
         rule=rule_metrics,
         baseline=baseline_metrics,
+        hold=hold_metrics,
         equity_curve=curve,
         trades=trades,
         decisions=dict(sorted(decisions.items())),

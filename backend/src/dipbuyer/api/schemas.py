@@ -275,6 +275,8 @@ class ProfitPoint(BaseModel):
     date: dt.date
     rule: Decimal
     baseline: Decimal
+    hold: Decimal | None = None
+    """Buy and hold (same dollars bought at the start); absent in older results."""
 
 
 class RecommendationFullPeriod(BaseModel):
@@ -282,6 +284,8 @@ class RecommendationFullPeriod(BaseModel):
     end: dt.date
     rule: RecommendationMetrics
     baseline: RecommendationMetrics
+    hold: RecommendationMetrics | None = None
+    """Buy and hold over the same period; absent in results computed before it existed."""
     profit_curve: list[ProfitPoint]
 
 

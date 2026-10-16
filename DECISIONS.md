@@ -225,3 +225,10 @@ Choices made where the spec was silent or ambiguous, and every deviation from it
     dip-buyer positions in the same symbol are untouched.
 59. Picks run under their own advisory lock and are independent of the dip-buyer rules
     and spend caps; they have their own per-pick notional setting.
+
+## Buy & hold comparison
+
+60. Dip-buyer backtests and recommendations also show **buy & hold**: the same total dollars
+    the rule deployed, bought at once at the first session's open and held to the end. It
+    appears next to the rule and monthly DCA in the metrics, return tiles and charts. Results
+    stored before it existed lack it and are shown without it. Daily picks are unchanged.

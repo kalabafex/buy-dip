@@ -23,7 +23,9 @@ export const backtestResultsSchema = z.object({
   starting_cash: dec,
   rule: metrics,
   baseline: metrics,
-  equity_curve: z.array(z.object({ date: z.string(), rule: dec, baseline: dec })),
+  /** Buy and hold the same dollars from the first open; absent in older results. */
+  hold: metrics.optional(),
+  equity_curve: z.array(z.object({ date: z.string(), rule: dec, baseline: dec, hold: dec.optional() })),
   trades: z.array(
     z.object({
       session_date: z.string(),

@@ -2087,6 +2087,17 @@
             "title": "Date",
             "type": "string"
           },
+          "hold": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold"
+          },
           "rule": {
             "title": "Rule",
             "type": "string"
@@ -2207,6 +2218,16 @@
             "format": "date",
             "title": "End",
             "type": "string"
+          },
+          "hold": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecommendationMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "profit_curve": {
             "items": {

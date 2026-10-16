@@ -53,6 +53,7 @@ def test_recommend_ranks_and_reports() -> None:
     assert top["params"]["symbol"] == "SYN"
     assert top["confidence"] in {"strong", "moderate", "weak"}
     assert top["full_period"]["profit_curve"]
+    assert "hold" in top["full_period"] and "hold" in top["full_period"]["profit_curve"][0]
     assert "condition_met" in top["current"]
     assert out["windows"] == len(res.windows) >= 4
 

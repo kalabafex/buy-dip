@@ -6,23 +6,31 @@ import { useChart, useCrosshairTime } from "@/components/charts/useChart";
 import { fmtDay } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export type ComparisonPoint = { date: string; rule: string; baseline: string };
+export type ComparisonPoint = {
+  date: string;
+  rule: string;
+  baseline: string;
+  /** Buy and hold over the same range; absent in results computed before it existed. */
+  hold?: string | null;
+};
 
 type Series = {
   chart: IChartApi;
   colors: ChartColors;
   rule: ISeriesApi<"Line">;
   baseline: ISeriesApi<"Line">;
+  hold: ISeriesApi<"Line">;
 };
 
 /**
- * Rule (accent) vs monthly-DCA baseline (gray context) on one shared axis.
- * Emphasis form: the rule is the subject, DCA is the reference.
+ * Rule (accent) vs monthly-DCA baseline (gray context) and buy-and-hold (second hue) on one
+ * shared axis. The rule is the subject; DCA and buy-and-hold are the references.
  */
 export function ComparisonChart({
   points,
   ruleLabel = "Rule",
   baselineLabel = "Monthly DCA",
+  holdLabel = "Buy & hold",
   format,
   zeroLine = false,
   interactive = true,
@@ -32,6 +40,7 @@ export function ComparisonChart({
   points: ComparisonPoint[];
   ruleLabel?: string;
   baselineLabel?: string;
+  holdLabel?: string;
   format: (v: number) => string;
   zeroLine?: boolean;
   interactive?: boolean;
@@ -59,6 +68,7 @@ export function ComparisonChart({
         priceFormat,
       };
       const baseline = chart.addLineSeries({ ...common, color: colors.context, lastValueVisible: false });
+      const hold = chart.addLineSeries({ ...common, color: colors.series2, lastValueVisible: false });
       const rule = chart.addLineSeries({ ...common, color: colors.series1 });
       if (zeroRef.current) {
         rule.createPriceLine({
@@ -70,7 +80,7 @@ export function ComparisonChart({
           title: "",
         });
       }
-      return { chart, colors, baseline, rule };
+      return { chart, colors, baseline, hold, rule };
     },
     { interactive },
   );
@@ -81,12 +91,16 @@ export function ComparisonChart({
     if (!s) return;
     s.rule.setData(points.map((p) => ({ time: p.date as Time, value: Number(p.rule) })));
     s.baseline.setData(points.map((p) => ({ time: p.date as Time, value: Number(p.baseline) })));
+    s.hold.setData(
+      points.filter((p) => p.hold != null).map((p) => ({ time: p.date as Time, value: Number(p.hold) })),
+    );
     s.chart.timeScale().fitContent();
   }, [s, points]);
 
   const hovered = useCrosshairTime(s?.chart);
   const shown = (typeof hovered === "string" ? byDate.get(hovered) : undefined) ?? points[points.length - 1];
   const colors = s?.colors;
+  const hasHold = points.some((p) => p.hold != null);
 
   return (
     <div className={cn("grid grid-cols-1 gap-2", className)}>
@@ -103,6 +117,15 @@ export function ComparisonChart({
             color: colors?.context ?? "currentColor",
             value: shown ? format(Number(shown.baseline)) : undefined,
           },
+          ...(hasHold
+            ? [
+                {
+                  label: holdLabel,
+                  color: colors?.series2 ?? "currentColor",
+                  value: shown?.hold != null ? format(Number(shown.hold)) : undefined,
+                },
+              ]
+            : []),
         ]}
       />
       <div ref={container} className={cn("w-full", chartHeight)} />

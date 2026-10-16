@@ -84,3 +84,20 @@ def test_empty_range_raises() -> None:
     bars = make_bars("T", ["100"] * 5, dt.date(2025, 6, 9))
     with pytest.raises(ValueError, match="no bars"):
         run_backtest(rule(symbol="T"), bars, dt.date(2030, 1, 1), dt.date(2030, 2, 1), D(1))
+
+
+def test_buy_and_hold_comparison() -> None:
+    bars = load_csv_bars(FIXTURES / "SYNTH_daily.csv")
+    res = run_backtest(
+        default_rule("SYNTH"), bars, dt.date(2021, 1, 1), dt.date(2023, 12, 29), D(10000)
+    )
+    first = next(b for b in bars if b.session_date >= dt.date(2021, 1, 1))
+    last = next(b for b in reversed(bars) if b.session_date <= dt.date(2023, 12, 29))
+    # same dollars as the rule, one buy at the first open, held to the end
+    assert res.hold.num_buys == 1
+    assert abs(res.hold.total_invested - res.rule.total_invested) < first.open
+    assert res.hold.avg_cost == first.open
+    expected = (last.close / first.open - 1) * 100
+    assert abs(res.hold.return_pct - expected) < D("0.01")
+    point = res.to_json()["equity_curve"][-1]
+    assert set(point) == {"date", "rule", "baseline", "hold"}

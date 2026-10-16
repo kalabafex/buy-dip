@@ -1201,6 +1201,8 @@ export interface components {
              * Format: date
              */
             date: string;
+            /** Hold */
+            hold?: string | null;
             /** Rule */
             rule: string;
         };
@@ -1242,6 +1244,7 @@ export interface components {
              * Format: date
              */
             end: string;
+            hold?: components["schemas"]["RecommendationMetrics"] | null;
             /** Profit Curve */
             profit_curve: components["schemas"]["ProfitPoint"][];
             rule: components["schemas"]["RecommendationMetrics"];

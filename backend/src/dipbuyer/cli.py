@@ -61,13 +61,18 @@ def load_csv_bars(path: Path) -> list[Bar]:
 
 def format_result(r: BacktestResult) -> str:
     rows = [
-        ("", "Rule", "Monthly DCA"),
-        ("Total invested", r.rule.total_invested, r.baseline.total_invested),
-        ("Final value", r.rule.final_value, r.baseline.final_value),
-        ("Return %", r.rule.return_pct, r.baseline.return_pct),
-        ("Max drawdown %", r.rule.max_drawdown_pct, r.baseline.max_drawdown_pct),
-        ("Buys", r.rule.num_buys, r.baseline.num_buys),
-        ("Average cost", r.rule.avg_cost, r.baseline.avg_cost),
+        ("", "Rule", "Monthly DCA", "Buy & hold"),
+        ("Total invested", r.rule.total_invested, r.baseline.total_invested, r.hold.total_invested),
+        ("Final value", r.rule.final_value, r.baseline.final_value, r.hold.final_value),
+        ("Return %", r.rule.return_pct, r.baseline.return_pct, r.hold.return_pct),
+        (
+            "Max drawdown %",
+            r.rule.max_drawdown_pct,
+            r.baseline.max_drawdown_pct,
+            r.hold.max_drawdown_pct,
+        ),
+        ("Buys", r.rule.num_buys, r.baseline.num_buys, r.hold.num_buys),
+        ("Average cost", r.rule.avg_cost, r.baseline.avg_cost, r.hold.avg_cost),
     ]
 
     def fmt(v: object) -> str:
@@ -76,7 +81,7 @@ def format_result(r: BacktestResult) -> str:
         return "-" if v is None else str(v)
 
     lines = [f"{r.symbol} {r.start_date} -> {r.end_date}, starting cash {r.starting_cash:,.2f}"]
-    lines += [f"{a:<16}{fmt(b):>16}{fmt(c):>16}" for a, b, c in rows]
+    lines += [f"{a:<16}{fmt(b):>16}{fmt(c):>16}{fmt(d):>16}" for a, b, c, d in rows]
     lines.append("Decisions: " + ", ".join(f"{k}={v}" for k, v in r.decisions.items()))
     return "\n".join(lines)
 
