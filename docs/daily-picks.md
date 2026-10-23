@@ -1,8 +1,9 @@
 # Daily picks
 
-Every trading day the worker publishes **5 intraday picks** from the S&P 500, each with an
-exact plan: when to buy, at what limit, the profit target, the stop loss and the latest exit
-time, plus the return history behind it. With auto-trade on (paper account only), it places
+Every trading day the worker publishes **3 intraday picks** from the S&P 500, each with an
+exact plan (when to buy, at what limit, the profit target, the stop loss and the latest exit
+time), a **projected move** with a likely range, a **certainty** percentage, and a saved,
+itemized explanation of why the engine chose it. With auto-trade on (paper account only), it places
 and manages the trades itself and records what actually happened.
 
 **Nothing here predicts the future.** Expected returns are averages of past occurrences of
@@ -15,7 +16,7 @@ actual fills every day so you can judge the picks on live results, not just back
 |---|---|
 | Weekly (off-hours) | **Calibration**: ~5 years of daily bars for the universe are downloaded and every setup × exit combination is backtested (see below). |
 | 08:50 | Completed daily bars for all ~500 stocks are refreshed. |
-| **09:35** | **Picks published.** Today's opens are read from a market snapshot, the setups that fire are ranked, and the top 5 are stored and sent as an alert. With auto-trade on, one bracket order is placed per tradeable pick: a limit buy (DAY) with a take-profit limit and a stop-loss stop. |
+| **09:35** | **Picks published.** Today's opens are read from a market snapshot, the setups that fire are ranked, and the top 3 are stored (plus the ~30 best runners-up as shadow candidates) and sent as an alert. With auto-trade on, one bracket order is placed per tradeable pick: a limit buy (DAY) with a take-profit limit and a stop-loss stop. |
 | every minute | Fills are reconciled; target/stop exits are recorded. |
 | **15:55** | **Forced exit.** Unfilled entries and the remaining exit leg are cancelled, and whatever is still held is sold at market. Nothing is held overnight. |
 | 16:15 | Each pick's **plan return** (what following the plan returned, from the day's OHLC) and **realized return** (from actual fills) are recorded, and a results alert is sent. |
@@ -50,6 +51,47 @@ range (ATR), or none (exit at the close): 9 combinations.
   setup's average across all stocks: `(n·stock_mean + 20·setup_mean) / (n + 20)`, where `n`
   is the stock's number of past occurrences. The win rate is blended the same way.
 * **Ranking:** best setup per stock, validated setups first, then by expected return.
+
+## Projected move, certainty and the engine
+
+For every setup that fires, the engine computes:
+
+* **Base**: the stock's own history with the setup blended with the setup's average across
+  all stocks, `(n·stock + 20·setup) / (n + 20)`.
+* **Feature adjustment**: per setup, a ridge regression on 8 features (opening gap, ATR %,
+  2-day RSI, distance from the 50- and 200-day averages, down-day streak, yesterday's volume
+  vs its 20-day average, distance from the 20-day high), fitted on the training years and
+  **used only if it beats the plain average on the validation years**. Each feature's
+  contribution (coefficient × standardized value) is saved.
+* **Projected move** = (base + adjustment) × the setup's weekly-review multiplier. The likely
+  range is the middle 50% of past outcomes for the setup, centred on the projection.
+* **Certainty** = probability that following the plan ends positive: a logistic model per
+  setup (again only if it beats the base rate on validation) blended with the stock's own
+  win rate, then passed through the weekly-review calibration.
+* **Ranking**: validated and not suspended setups first, then projected move, then
+  certainty; one setup per stock; top 3.
+
+**Saved reasons.** Each pick and each shadow candidate stores its explanation: the setup and
+the actual numbers that triggered it, the setup's validated history, the stock's own
+history, the feature contributions, any weekly-review scaling or suspension, the exit
+choice, and how certainty was computed. They are shown on the pick cards.
+
+## Weekly review
+
+Every weekend (or Friday after the close) the worker compares predictions with outcomes for
+all scored candidates of the last 8 weeks (picks and runners-up, ~150 per week) and
+publishes a new engine version if the evidence justifies a change:
+
+| Check | Change (bounded, partial steps) | Evidence needed |
+|---|---|---|
+| A setup's projections run hot or cold | multiplier moves 30% of the way to realized / projected, within 0-1.5 | ≥ 20 candidates of that setup |
+| A setup loses money live | suspended from picks (still tracked); reinstated when it recovers | ≥ 30 candidates, t ≤ −2 |
+| Certainty is miscalibrated | certainty recalibration (logistic on the raw certainty) moves halfway to the fit | ≥ 60 candidates |
+
+Each review stores the week's and the 8-week comparison (projected vs realized, bias,
+direction hit rate, certainty vs actual win rate by bucket, per-setup results) and every
+change with its reason. The Engine page shows versions and reviews; "Review now" runs one
+immediately.
 
 ## Trading rules
 

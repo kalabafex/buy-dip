@@ -209,6 +209,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/picks/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Picks Candidates
+         * @description Every scored candidate of a day (the picks plus the runners-up), best first.
+         */
+        get: operations["picks_candidates_api_picks_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/picks/day": {
         parameters: {
             query?: never;
@@ -240,6 +260,43 @@ export interface paths {
         get: operations["picks_days_api_picks_days_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/picks/engine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Picks Engine */
+        get: operations["picks_engine_api_picks_engine_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/picks/engine/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Picks Engine Review Now
+         * @description Run the weekly review now (it also runs automatically every weekend).
+         */
+        post: operations["picks_engine_review_now_api_picks_engine_review_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -677,6 +734,86 @@ export interface components {
             /** Enabled */
             enabled: boolean;
         };
+        /** EngineOut */
+        EngineOut: {
+            active: components["schemas"]["EngineVersionOut"];
+            /** Reviews */
+            reviews: components["schemas"]["EngineReviewOut"][];
+            /** Versions */
+            versions: components["schemas"]["EngineVersionOut"][];
+        };
+        /** EngineParamsOut */
+        EngineParamsOut: {
+            /** Certainty A */
+            certainty_a: number;
+            /** Certainty B */
+            certainty_b: number;
+            /** Family Multiplier */
+            family_multiplier: {
+                [key: string]: number;
+            };
+            /** Suspended */
+            suspended: string[];
+            /** Version */
+            version: number;
+        };
+        /** EngineReviewOut */
+        EngineReviewOut: {
+            /** Calibration */
+            calibration: components["schemas"]["ReviewBin"][];
+            /** Certainty */
+            certainty: {
+                [key: string]: number;
+            };
+            /** Changes */
+            changes: components["schemas"]["ReviewChange"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Families */
+            families: {
+                [key: string]: components["schemas"]["ReviewStats"];
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            params_after: components["schemas"]["EngineParamsOut"];
+            params_before: components["schemas"]["EngineParamsOut"];
+            /**
+             * Reviewed On
+             * Format: date
+             */
+            reviewed_on: string;
+            /** Summary */
+            summary: string;
+            /** Version After */
+            version_after: number;
+            /** Version Before */
+            version_before: number;
+            week_all: components["schemas"]["ReviewStats"];
+            week_picks: components["schemas"]["ReviewStats"];
+            window_all: components["schemas"]["ReviewStats"];
+            /** Window Days */
+            window_days: number;
+            window_picks: components["schemas"]["ReviewStats"];
+        };
+        /** EngineVersionOut */
+        EngineVersionOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            params: components["schemas"]["EngineParamsOut"];
+            /** Review Id */
+            review_id: string | null;
+            /** Version */
+            version: number;
+        };
         /** EvaluationOut */
         EvaluationOut: {
             /** Condition Met */
@@ -865,6 +1002,50 @@ export interface components {
          * @enum {string}
          */
         OrderStatus: "PENDING" | "SUBMITTED" | "PARTIALLY_FILLED" | "FILLED" | "CANCELED" | "EXPIRED" | "REJECTED" | "FAILED";
+        /** PickCandidateOut */
+        PickCandidateOut: {
+            /** Certainty Pct */
+            certainty_pct: string;
+            /** Chosen */
+            chosen: boolean;
+            /** Eligible */
+            eligible: boolean;
+            /** Engine Version */
+            engine_version: number;
+            /** Family */
+            family: string;
+            /** Family Label */
+            family_label: string;
+            /** Name */
+            name: string;
+            /** Plan Exit Reason */
+            plan_exit_reason: string | null;
+            /** Plan Return Pct */
+            plan_return_pct: string | null;
+            /** Projected High Pct */
+            projected_high_pct: string;
+            /** Projected Low Pct */
+            projected_low_pct: string;
+            /** Projected Move Pct */
+            projected_move_pct: string;
+            /** Reasons */
+            reasons: components["schemas"]["PickReason"][];
+            /** Score Rank */
+            score_rank: number;
+            /** Symbol */
+            symbol: string;
+        };
+        /** PickContribution */
+        PickContribution: {
+            /** Feature */
+            feature: string;
+            /** Impact Pct */
+            impact_pct: number;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number | null;
+        };
         /** PickFamilyOut */
         PickFamilyOut: {
             /** Accepted */
@@ -935,6 +1116,12 @@ export interface components {
         PickOut: {
             /** Accepted */
             accepted: boolean;
+            /** Base Return Pct */
+            base_return_pct: string | null;
+            /** Certainty Pct */
+            certainty_pct: string | null;
+            /** Contributions */
+            contributions: components["schemas"]["PickContribution"][];
             /** Day Close */
             day_close: string | null;
             /** Day High */
@@ -943,6 +1130,8 @@ export interface components {
             day_low: string | null;
             /** Day Open */
             day_open: string | null;
+            /** Engine Version */
+            engine_version: number | null;
             /** Entry Fill Price */
             entry_fill_price: string | null;
             /** Entry Filled Qty */
@@ -992,6 +1181,10 @@ export interface components {
             id: string;
             /** Mode */
             mode: string | null;
+            /** Model Adjustment Pct */
+            model_adjustment_pct: string | null;
+            /** Multiplier */
+            multiplier: string | null;
             /** Name */
             name: string;
             /** Notional Usd */
@@ -1004,14 +1197,24 @@ export interface components {
             plan_exit_reason: string | null;
             /** Plan Return Pct */
             plan_return_pct: string | null;
+            /** Projected High Pct */
+            projected_high_pct: string | null;
+            /** Projected Low Pct */
+            projected_low_pct: string | null;
+            /** Projected Move Pct */
+            projected_move_pct: string;
             /** Qty */
             qty: number | null;
             /** Rank */
             rank: number;
+            /** Raw Certainty Pct */
+            raw_certainty_pct: string | null;
             /** Realized Pnl Usd */
             realized_pnl_usd: string | null;
             /** Realized Return Pct */
             realized_return_pct: string | null;
+            /** Reasons */
+            reasons: components["schemas"]["PickReason"][];
             /** Samples */
             samples: number;
             /** Sector */
@@ -1037,6 +1240,17 @@ export interface components {
             target_price: string | null;
             /** Win Rate */
             win_rate: string;
+        };
+        /** PickReason */
+        PickReason: {
+            /** Feature */
+            feature?: string | null;
+            /** Impact Pct */
+            impact_pct?: number | null;
+            /** Kind */
+            kind: string;
+            /** Text */
+            text: string;
         };
         /** PicksDayOut */
         PicksDayOut: {
@@ -1430,6 +1644,57 @@ export interface components {
             trend_filter: components["schemas"]["TrendFilter"];
             /** @default PULLBACK_FROM_HIGH */
             trigger_type: components["schemas"]["TriggerType"];
+        };
+        /** ReviewBin */
+        ReviewBin: {
+            /** Avg Certainty */
+            avg_certainty: number | null;
+            /** N */
+            n: number;
+            /** Range */
+            range: string;
+            /** Win Rate */
+            win_rate: number | null;
+        };
+        /** ReviewChange */
+        ReviewChange: {
+            /** Family */
+            family?: string | null;
+            /** From */
+            from?: unknown;
+            /** Kind */
+            kind: string;
+            /** Reason */
+            reason: string;
+            /** To */
+            to?: unknown;
+        };
+        /** ReviewStats */
+        ReviewStats: {
+            /** Avg Certainty */
+            avg_certainty?: number | null;
+            /** Bias Pct */
+            bias_pct?: number | null;
+            /** Brier */
+            brier?: number | null;
+            /** Direction Hit Rate */
+            direction_hit_rate?: number | null;
+            /** Implied Multiplier */
+            implied_multiplier?: number | null;
+            /** Label */
+            label?: string | null;
+            /** Mae Pct */
+            mae_pct?: number | null;
+            /** N */
+            n: number;
+            /** Projected Mean Pct */
+            projected_mean_pct?: number | null;
+            /** Realized Mean Pct */
+            realized_mean_pct?: number | null;
+            /** T Stat */
+            t_stat?: number | null;
+            /** Win Rate */
+            win_rate?: number | null;
         };
         /** RuleOut */
         RuleOut: {
@@ -2011,6 +2276,37 @@ export interface operations {
             };
         };
     };
+    picks_candidates_api_picks_candidates_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PickCandidateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     picks_day_api_picks_day_get: {
         parameters: {
             query?: {
@@ -2069,6 +2365,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    picks_engine_api_picks_engine_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngineOut"];
+                };
+            };
+        };
+    };
+    picks_engine_review_now_api_picks_engine_review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EngineReviewOut"];
                 };
             };
         };

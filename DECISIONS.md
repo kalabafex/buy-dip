@@ -232,3 +232,16 @@ Choices made where the spec was silent or ambiguous, and every deviation from it
     the rule deployed, bought at once at the first session's open and held to the end. It
     appears next to the rule and monthly DCA in the metrics, return tiles and charts. Results
     stored before it existed lack it and are shown without it. Daily picks are unchanged.
+
+## Picks engine and weekly review
+
+61. Three picks per day (was five). The ~30 best-scored candidates (one per stock) are also
+    stored and scored after the close as shadow outcomes, so the weekly review learns from
+    ~150 results a week instead of 15.
+62. "Projected move" is the expected return of following the plan, after costs; "certainty"
+    is the calibrated probability that it ends positive. Both come from per-setup ridge and
+    logistic models on 8 features, each used only when it beats the plain average on the
+    validation years; otherwise the historical averages are used.
+63. The weekly review only changes bounded parameters (per-setup multipliers, suspensions,
+    certainty calibration) in partial steps and with minimum evidence, to avoid chasing noise.
+    The models themselves are refitted by the weekly calibration on refreshed history.

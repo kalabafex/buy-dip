@@ -11,25 +11,43 @@ from sqlalchemy import select
 
 from dipbuyer.api.deps import DbDep, DepsDep, UserDep
 from dipbuyer.api.schemas import (
+    EngineOut,
+    EngineParamsOut,
+    EngineReviewOut,
+    EngineVersionOut,
+    PickCandidateOut,
+    PickContribution,
     PickFamilyOut,
     PickFamilyStats,
     PickModelOut,
     PickOut,
+    PickReason,
     PicksDayOut,
     PicksDaySummary,
     PicksPerformanceOut,
     PicksPerformancePoint,
     PicksSettingsIn,
     PicksSettingsOut,
+    ReviewBin,
+    ReviewChange,
+    ReviewStats,
 )
 from dipbuyer.data.calendar import ny_date, session_for
 from dipbuyer.domain.enums import BacktestStatus
 from dipbuyer.persistence import repo
 from dipbuyer.persistence.db import notify
-from dipbuyer.persistence.models import DailyPickRow, PickModelRow
+from dipbuyer.persistence.models import (
+    DailyPickRow,
+    EngineReviewRow,
+    EngineVersionRow,
+    PickCandidateRow,
+    PickModelRow,
+)
+from dipbuyer.picks.engine import FEATURE_LABELS
 from dipbuyer.picks.select import entry_exit_times
 from dipbuyer.picks.strategies import FAMILY_DESCRIPTIONS, FAMILY_LABELS, Family
-from dipbuyer.worker.picks_trader import latest_model, queue_calibration
+from dipbuyer.picks.universe import members_by_symbol
+from dipbuyer.worker.picks_trader import latest_model, queue_calibration, run_engine_review
 
 router = APIRouter(prefix="/picks", tags=["picks"])
 
@@ -69,6 +87,25 @@ def pick_out(r: DailyPickRow) -> PickOut:
         win_rate=r.win_rate,
         samples=r.samples,
         family_mean_pct=_pct(r.family_mean) or Decimal(0),
+        projected_move_pct=_pct(r.expected_return) or Decimal(0),
+        projected_low_pct=_pct(r.projected_low),
+        projected_high_pct=_pct(r.projected_high),
+        certainty_pct=_pct(r.certainty),
+        raw_certainty_pct=_pct(r.raw_certainty),
+        base_return_pct=_pct(r.base_return),
+        model_adjustment_pct=_pct(r.model_adjustment),
+        multiplier=r.multiplier,
+        engine_version=r.engine_version,
+        reasons=[PickReason.model_validate(x) for x in (r.reasons or [])],
+        contributions=[
+            PickContribution(
+                feature=k["feature"],
+                label=str(FEATURE_LABELS.get(str(k["feature"]), k["feature"])),
+                value=k.get("value"),
+                impact_pct=float(k["impact_pct"]),
+            )
+            for k in (r.contributions or [])
+        ],
         qty=r.qty,
         notional_usd=notional,
         expected_pnl_usd=(notional * r.expected_return).quantize(Decimal("0.01"))
@@ -306,3 +343,94 @@ def put_picks_settings(
             f"${body.notional_usd} per pick, paper account only.",
         )
     return _settings_out(db)
+
+
+@router.get("/candidates", response_model=list[PickCandidateOut])
+def picks_candidates(
+    db: DbDep, deps: DepsDep, _: UserDep, date: dt.date | None = None
+) -> list[PickCandidateOut]:
+    """Every scored candidate of a day (the picks plus the runners-up), best first."""
+    day = date or ny_date(deps.now())
+    members = members_by_symbol()
+    rows = db.scalars(
+        select(PickCandidateRow)
+        .where(PickCandidateRow.session_date == day)
+        .order_by(PickCandidateRow.score_rank)
+    )
+    return [
+        PickCandidateOut(
+            score_rank=r.score_rank,
+            symbol=r.symbol,
+            name=members[r.symbol].name if r.symbol in members else r.symbol,
+            family=r.family,
+            family_label=FAMILY_LABELS[Family(r.family)],
+            chosen=r.chosen,
+            eligible=r.eligible,
+            engine_version=r.engine_version,
+            projected_move_pct=_pct(r.projected_return) or Decimal(0),
+            projected_low_pct=_pct(r.projected_low) or Decimal(0),
+            projected_high_pct=_pct(r.projected_high) or Decimal(0),
+            certainty_pct=_pct(r.certainty) or Decimal(0),
+            plan_return_pct=_pct(r.plan_return),
+            plan_exit_reason=r.plan_exit_reason,
+            reasons=[PickReason.model_validate(x) for x in r.reasons],
+        )
+        for r in rows
+    ]
+
+
+def _review_out(r: EngineReviewRow) -> EngineReviewOut:
+    rep: dict[str, Any] = r.report
+    return EngineReviewOut(
+        id=r.id,
+        reviewed_on=r.reviewed_on,
+        version_before=r.version_before,
+        version_after=r.version_after,
+        summary=rep["summary"],
+        window_days=rep["window_days"],
+        week_all=ReviewStats(**rep["week"]["all"]),
+        week_picks=ReviewStats(**rep["week"]["picks"]),
+        window_all=ReviewStats(**rep["window"]["all"]),
+        window_picks=ReviewStats(**rep["window"]["picks"]),
+        calibration=[ReviewBin(**b) for b in rep["window"]["calibration"]],
+        families={k: ReviewStats(**v) for k, v in rep["families"].items()},
+        certainty={k: float(v) for k, v in (rep.get("certainty") or {}).items()},
+        changes=[ReviewChange.model_validate(c) for c in rep["changes"]],
+        params_before=EngineParamsOut(**rep["params_before"]),
+        params_after=EngineParamsOut(**rep["params_after"]),
+        created_at=r.created_at,
+    )
+
+
+def _version_out(v: EngineVersionRow) -> EngineVersionOut:
+    params = dict(v.params)
+    params["version"] = v.version
+    return EngineVersionOut(
+        version=v.version,
+        params=EngineParamsOut(**params),
+        review_id=v.review_id,
+        created_at=v.created_at,
+    )
+
+
+@router.get("/engine", response_model=EngineOut)
+def picks_engine(db: DbDep, _: UserDep) -> EngineOut:
+    versions = list(db.scalars(select(EngineVersionRow).order_by(EngineVersionRow.version.desc())))
+    if not versions:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "engine not initialised")
+    reviews = db.scalars(
+        select(EngineReviewRow).order_by(EngineReviewRow.created_at.desc()).limit(26)
+    )
+    return EngineOut(
+        active=_version_out(versions[0]),
+        versions=[_version_out(v) for v in versions],
+        reviews=[_review_out(r) for r in reviews],
+    )
+
+
+@router.post("/engine/review", response_model=EngineReviewOut, status_code=201)
+def picks_engine_review_now(db: DbDep, deps: DepsDep, _: UserDep) -> EngineReviewOut:
+    """Run the weekly review now (it also runs automatically every weekend)."""
+    rev = run_engine_review(db, ny_date(deps.now()))
+    db.flush()
+    return _review_out(rev)

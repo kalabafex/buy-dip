@@ -88,6 +88,8 @@ class Features:
     rsi2: F
     down_streak: F
     high20: F
+    volume_ratio: F
+    """Yesterday's volume / average volume of the 20 sessions before it."""
 
 
 def _rolling_mean_prev(x: F, n: int) -> F:
@@ -131,7 +133,18 @@ def _wilder_rsi_prev(close: F, period: int) -> F:
     return out
 
 
-def compute_features(o: F, h: F, lo: F, c: F) -> Features:
+def _volume_ratio_prev(v: F) -> F:
+    """v[t-1] / mean(v[t-21:t-1]) at index t (NaN when unknown or zero)."""
+    out = np.full(v.shape[0], np.nan)
+    avg = _rolling_mean_prev(v, 20)  # avg[t] = mean(v[t-20:t])
+    for t in range(21, v.shape[0]):
+        base = avg[t - 1]
+        if np.isfinite(base) and base > 0 and v[t - 1] > 0:
+            out[t] = v[t - 1] / base
+    return out
+
+
+def compute_features(o: F, h: F, lo: F, c: F, v: F | None = None) -> Features:
     n = c.shape[0]
     prev_close = np.full(n, np.nan)
     prev_close[1:] = c[:-1]
@@ -158,6 +171,7 @@ def compute_features(o: F, h: F, lo: F, c: F) -> Features:
         rsi2=_wilder_rsi_prev(c, 2),
         down_streak=down,
         high20=_rolling_max_prev(c, 20),
+        volume_ratio=_volume_ratio_prev(v) if v is not None else np.full(n, np.nan),
     )
 
 

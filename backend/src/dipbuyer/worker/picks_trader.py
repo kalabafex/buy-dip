@@ -38,9 +38,24 @@ from dipbuyer.domain.money import ZERO, floor_whole
 from dipbuyer.persistence import repo
 from dipbuyer.persistence.db import notify, session_scope
 from dipbuyer.persistence.lock import try_advisory_lock
-from dipbuyer.persistence.models import DailyPickRow, PickModelRow
+from dipbuyer.persistence.models import (
+    DailyPickRow,
+    EngineReviewRow,
+    EngineVersionRow,
+    PickCandidateRow,
+    PickModelRow,
+)
 from dipbuyer.picks import calibrate as cal
-from dipbuyer.picks.select import Opening, candidates_for_symbol, entry_exit_times, rank
+from dipbuyer.picks.engine import EngineParams
+from dipbuyer.picks.review import Outcome, review
+from dipbuyer.picks.select import (
+    CANDIDATES_KEPT,
+    PICKS_PER_DAY,
+    Opening,
+    best_per_symbol,
+    candidates_for_symbol,
+    entry_exit_times,
+)
 from dipbuyer.picks.strategies import FAMILY_LABELS, Family, simulate_one
 from dipbuyer.picks.universe import load_universe, members_by_symbol
 
@@ -93,6 +108,55 @@ def queue_calibration(s: Session) -> PickModelRow:
     s.add(row)
     s.flush()
     return row
+
+
+def active_engine(s: Session) -> EngineParams:
+    row = s.scalars(
+        select(EngineVersionRow).order_by(EngineVersionRow.version.desc()).limit(1)
+    ).one_or_none()
+    if row is None:
+        return EngineParams()
+    params = EngineParams.from_json(row.params)
+    params.version = row.version
+    return params
+
+
+def run_engine_review(s: Session, today: dt.date) -> EngineReviewRow:
+    """Compare predictions with outcomes and store the review (and a new version if changed)."""
+    params = active_engine(s)
+    since = today - dt.timedelta(days=90)
+    rows = s.scalars(
+        select(PickCandidateRow).where(
+            PickCandidateRow.session_date >= since, PickCandidateRow.plan_return.is_not(None)
+        )
+    ).all()
+    outcomes = [
+        Outcome(
+            session_date=r.session_date,
+            family=r.family,
+            chosen=r.chosen,
+            projected=float(r.projected_return),
+            multiplier=float(r.multiplier),
+            certainty=float(r.certainty),
+            raw_certainty=float(r.raw_certainty),
+            realized=float(r.plan_return or 0),
+        )
+        for r in rows
+    ]
+    new, report = review(outcomes, params, today)
+    rev = EngineReviewRow(
+        id=uuid.uuid4(),
+        reviewed_on=today,
+        version_before=params.version,
+        version_after=new.version,
+        report=report,
+    )
+    s.add(rev)
+    s.flush()
+    if new.version != params.version:
+        s.add(EngineVersionRow(version=new.version, params=new.to_json(), review_id=rev.id))
+    notify(s, "picks", {"review": str(rev.id), "version": new.version})
+    return rev
 
 
 def last_completed_session(now: dt.datetime) -> dt.date:
@@ -200,6 +264,47 @@ class PicksTrader:
             f"Setups with a validated edge: {', '.join(accepted) or 'none'}.",
         )
 
+    # --- weekly engine review ------------------------------------------------------------
+    def run_weekly_review(self) -> bool:
+        """On weekends (or Friday after the close), review once per week."""
+        now = self.now()
+        today = ny_date(now)
+        sess = session_for(today)
+        weekend = today.weekday() >= 5
+        friday_after = (
+            today.weekday() == 4 and sess is not None and now >= sess.close + EVALUATE_AFTER_CLOSE
+        )
+        if not (weekend or friday_after):
+            return False
+        with session_scope(self.sf) as s:
+            last = s.scalars(
+                select(EngineReviewRow).order_by(EngineReviewRow.reviewed_on.desc()).limit(1)
+            ).one_or_none()
+            if last is not None and (today - last.reviewed_on).days < 6:
+                return False
+            has_data = (
+                s.scalar(
+                    select(PickCandidateRow.id)
+                    .where(PickCandidateRow.plan_return.is_not(None))
+                    .limit(1)
+                )
+                is not None
+            )
+            if not has_data:
+                return False
+            rev = run_engine_review(s, today)
+            report = rev.report
+        lines = [report["summary"]] + [c["reason"] for c in report["changes"]]
+        wk = report["week"]["all"]
+        if wk.get("n"):
+            lines.append(
+                f"This week: projected {wk['projected_mean_pct']:+.2f}% vs realized "
+                f"{wk['realized_mean_pct']:+.2f}% avg, certainty {wk['avg_certainty']:.0%} vs "
+                f"{wk['win_rate']:.0%} winners ({wk['n']} candidates)."
+            )
+        self.notifier.send(f"Engine review v{report['version_after']}", "\n".join(lines))
+        return True
+
     # --- daily cycle --------------------------------------------------------------------
     def tick(self) -> str:
         with try_advisory_lock(self.db_engine, PICKS_LOCK_KEY) as got:
@@ -272,6 +377,7 @@ class PicksTrader:
             families = model.summary["families"]
             stock_stats = model.stock_stats or {}
             model_id = model.id
+            params = active_engine(s)
         mode = settings.trading_mode
         md = self.md_factory(mode)
         prev = previous_session(today)
@@ -292,18 +398,51 @@ class PicksTrader:
                 continue  # stale history
             cands.extend(
                 candidates_for_symbol(
-                    sym, bars, Opening(open=snap.open, last=snap.last), families, stock_stats
+                    sym,
+                    bars,
+                    Opening(open=snap.open, last=snap.last),
+                    families,
+                    stock_stats,
+                    params,
                 )
             )
-        top = rank(cands)
+        scored = best_per_symbol(cands)[:CANDIDATES_KEPT]
+        top = scored[:PICKS_PER_DAY]
         with session_scope(self.sf) as s:
+            for i, c in enumerate(scored, start=1):
+                s.add(
+                    PickCandidateRow(
+                        id=uuid.uuid4(),
+                        session_date=today,
+                        score_rank=i,
+                        symbol=c.symbol,
+                        family=c.family.value,
+                        chosen=i <= PICKS_PER_DAY,
+                        eligible=c.eligible,
+                        engine_version=params.version,
+                        open_price=c.open,
+                        target_price=c.target,
+                        stop_price=c.stop,
+                        projected_return=_d(c.projected_return),
+                        projected_low=_d(c.projected_low),
+                        projected_high=_d(c.projected_high),
+                        certainty=_d(c.certainty),
+                        raw_certainty=_d(c.raw_certainty),
+                        multiplier=_d(c.multiplier),
+                        features=c.features,
+                        reasons=c.reasons,
+                        created_at=now,
+                    )
+                )
             for i, c in enumerate(top, start=1):
                 qty = int(floor_whole(notional / c.entry_limit)) if c.entry_limit > 0 else 0
                 skip = None
                 if not c.accepted:
                     skip = "setup has no validated edge in calibration"
-                elif Decimal(repr(c.expected_return * 100)) < min_expected:
-                    skip = f"expected return below the {min_expected}% minimum"
+                elif c.suspended:
+                    skip = "setup suspended by the weekly review after poor live results"
+                elif Decimal(repr(c.projected_return * 100)) < min_expected:
+                    skip = f"projected move below the {min_expected}% minimum"
                 elif qty < 1:
                     skip = f"one share costs more than the ${notional} per-pick budget"
                 m = members[c.symbol]
@@ -326,10 +465,27 @@ class PicksTrader:
                         stop_price=c.stop,
                         entry_time=entry_at,
                         exit_time=exit_at,
-                        expected_return=_d(c.expected_return),
-                        win_rate=_d(c.win_rate),
+                        expected_return=_d(c.projected_return),
+                        win_rate=_d(c.certainty),
                         samples=c.samples,
                         family_mean=_d(c.family_mean),
+                        projected_low=_d(c.projected_low),
+                        projected_high=_d(c.projected_high),
+                        certainty=_d(c.certainty),
+                        raw_certainty=_d(c.raw_certainty),
+                        base_return=_d(c.base_return),
+                        model_adjustment=_d(c.model_adjustment),
+                        multiplier=_d(c.multiplier),
+                        engine_version=params.version,
+                        reasons=c.reasons,
+                        contributions=[
+                            {
+                                "feature": k.feature,
+                                "value": k.value,
+                                "impact_pct": round(k.impact * 100, 4),
+                            }
+                            for k in c.contributions
+                        ],
                         status=(PickStatus.WATCH if skip else PickStatus.PLANNED).value,
                         skip_reason=skip,
                         qty=qty if not skip else None,
@@ -342,7 +498,7 @@ class PicksTrader:
             lines = [
                 f"{i}. {c.symbol} ({FAMILY_LABELS[c.family]}): buy <= {c.entry_limit}, "
                 f"target {c.target or '-'}, stop {c.stop or '-'}, "
-                f"exp {c.expected_return * 100:.2f}%"
+                f"projected {c.projected_return * 100:+.2f}%, certainty {c.certainty:.0%}"
                 for i, c in enumerate(top, start=1)
             ]
             self.notifier.send(f"Daily picks {today}", "\n".join(lines))
@@ -565,10 +721,34 @@ class PicksTrader:
                     )
                 )
             )
+            cand_rows = list(
+                s.scalars(
+                    select(PickCandidateRow).where(
+                        PickCandidateRow.session_date == today,
+                        PickCandidateRow.plan_return.is_(None),
+                    )
+                )
+            )
             mode = repo.settings_model(repo.get_settings_row(s)).trading_mode
-        if not rows:
+        if not rows and not cand_rows:
             return 0
-        bars = self.md_factory(mode).get_daily_bars_multi([r.symbol for r in rows], today, today)
+        symbols = sorted({r.symbol for r in rows} | {c.symbol for c in cand_rows})
+        bars = self.md_factory(mode).get_daily_bars_multi(symbols, today, today)
+        with session_scope(self.sf) as s:
+            for c in cand_rows:
+                day = next((b for b in bars.get(c.symbol, []) if b.session_date == today), None)
+                if day is None:
+                    continue
+                crow = s.get_one(PickCandidateRow, c.id)
+                ret, reason, _ = simulate_one(
+                    float(day.open),
+                    float(day.high),
+                    float(day.low),
+                    float(day.close),
+                    float(crow.target_price) if crow.target_price is not None else None,
+                    float(crow.stop_price) if crow.stop_price is not None else None,
+                )
+                crow.plan_return, crow.plan_exit_reason = _d(ret), reason
         n = 0
         with session_scope(self.sf) as s:
             for r in rows:

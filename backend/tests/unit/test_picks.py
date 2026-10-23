@@ -143,12 +143,16 @@ def test_candidates_and_rank() -> None:
         assert c.target > c.entry_limit
     if c.stop is not None:
         assert c.stop < c.open
-    assert 0 < c.win_rate <= 1
+    assert 0 < c.certainty < 1
+    assert c.projected_low <= c.projected_return <= c.projected_high
+    kinds = [r["kind"] for r in c.reasons]
+    assert kinds[0] == "setup" and "certainty" in kinds and "projection" in kinds
+    assert "Opened" in c.reasons[0]["text"]
     top = rank(cands)
-    assert len(top) == 5 and len({t.symbol for t in top}) == 5
-    assert all(t.accepted for t in top)
-    assert [t.expected_return for t in top] == sorted(
-        (t.expected_return for t in top), reverse=True
+    assert len(top) == 3 and len({t.symbol for t in top}) == 3
+    assert all(t.eligible for t in top)
+    assert [t.projected_return for t in top] == sorted(
+        (t.projected_return for t in top), reverse=True
     )
 
 

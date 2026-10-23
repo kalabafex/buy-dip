@@ -83,8 +83,9 @@ def main() -> None:
     def calibration_job() -> None:
         try:
             picks.run_calibrations()
+            picks.run_weekly_review()
         except Exception:
-            log.exception("picks calibration runner failed")
+            log.exception("picks calibration/review runner failed")
 
     def trading_job() -> None:
         try:

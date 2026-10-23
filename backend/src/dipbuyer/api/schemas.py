@@ -353,6 +353,22 @@ class RecommendationApplyIn(BaseModel):
 # --- daily picks ---------------------------------------------------------------------
 
 
+class PickReason(BaseModel):
+    kind: str
+    """setup, setup_history, stock_history, base, factor, engine, plan, certainty, projection."""
+    text: str
+    impact_pct: float | None = None
+    """Effect on the projected move in percentage points, when the reason has one."""
+    feature: str | None = None
+
+
+class PickContribution(BaseModel):
+    feature: str
+    label: str
+    value: float | None
+    impact_pct: float
+
+
 class PickOut(BaseModel):
     id: uuid.UUID
     session_date: dt.date
@@ -376,9 +392,24 @@ class PickOut(BaseModel):
     entry_time: dt.datetime
     exit_time: dt.datetime
     expected_return_pct: Decimal
+    """Same as projected_move_pct (kept for older clients)."""
     win_rate: Decimal
     samples: int
     family_mean_pct: Decimal
+    projected_move_pct: Decimal
+    """Projected move from entry to exit, after costs, in percent."""
+    projected_low_pct: Decimal | None
+    projected_high_pct: Decimal | None
+    """Middle 50% of past outcomes around the projection."""
+    certainty_pct: Decimal | None
+    """Calibrated probability (0-100) that following the plan ends positive."""
+    raw_certainty_pct: Decimal | None
+    base_return_pct: Decimal | None
+    model_adjustment_pct: Decimal | None
+    multiplier: Decimal | None
+    engine_version: int | None
+    reasons: list[PickReason]
+    contributions: list[PickContribution]
     qty: int | None
     notional_usd: Decimal | None
     expected_pnl_usd: Decimal | None
@@ -496,3 +527,95 @@ class PicksPerformanceOut(BaseModel):
     realized_pnl_usd: Decimal
     by_family: dict[str, dict[str, Any]]
     series: list[PicksPerformancePoint]
+
+
+class PickCandidateOut(BaseModel):
+    score_rank: int
+    symbol: str
+    name: str
+    family: str
+    family_label: str
+    chosen: bool
+    eligible: bool
+    engine_version: int
+    projected_move_pct: Decimal
+    projected_low_pct: Decimal
+    projected_high_pct: Decimal
+    certainty_pct: Decimal
+    plan_return_pct: Decimal | None
+    plan_exit_reason: str | None
+    reasons: list[PickReason]
+
+
+class ReviewStats(BaseModel):
+    n: int
+    projected_mean_pct: float | None = None
+    realized_mean_pct: float | None = None
+    bias_pct: float | None = None
+    mae_pct: float | None = None
+    direction_hit_rate: float | None = None
+    win_rate: float | None = None
+    avg_certainty: float | None = None
+    brier: float | None = None
+    t_stat: float | None = None
+    label: str | None = None
+    implied_multiplier: float | None = None
+
+
+class ReviewBin(BaseModel):
+    range: str
+    n: int
+    avg_certainty: float | None
+    win_rate: float | None
+
+
+class ReviewChange(BaseModel):
+    kind: str
+    """multiplier, suspend, unsuspend or certainty."""
+    family: str | None = None
+    reason: str
+    from_: Any = Field(default=None, alias="from")
+    to: Any = None
+
+    model_config = {"populate_by_name": True}
+
+
+class EngineParamsOut(BaseModel):
+    version: int
+    family_multiplier: dict[str, float]
+    suspended: list[str]
+    certainty_a: float
+    certainty_b: float
+
+
+class EngineReviewOut(BaseModel):
+    id: uuid.UUID
+    reviewed_on: dt.date
+    version_before: int
+    version_after: int
+    summary: str
+    window_days: int
+    week_all: ReviewStats
+    week_picks: ReviewStats
+    window_all: ReviewStats
+    window_picks: ReviewStats
+    calibration: list[ReviewBin]
+    families: dict[str, ReviewStats]
+    certainty: dict[str, float]
+    changes: list[ReviewChange]
+    params_before: EngineParamsOut
+    params_after: EngineParamsOut
+    created_at: dt.datetime
+
+
+class EngineVersionOut(BaseModel):
+    version: int
+    params: EngineParamsOut
+    review_id: uuid.UUID | None
+    created_at: dt.datetime
+
+
+class EngineOut(BaseModel):
+    active: EngineVersionOut
+    versions: list[EngineVersionOut]
+    reviews: list[EngineReviewOut]

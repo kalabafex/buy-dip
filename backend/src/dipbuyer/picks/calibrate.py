@@ -18,6 +18,7 @@ from typing import Any
 import numpy as np
 
 from dipbuyer.domain.models import Bar
+from dipbuyer.picks.engine import FEATURES, FamilyModel, feature_matrix, fit_family_model
 from dipbuyer.picks.strategies import (
     EXIT_GRID,
     ExitConfig,
@@ -98,6 +99,7 @@ class FamilyResult:
     validation: Stats
     accepted: bool
     grid: dict[str, dict[str, Any]] = field(default_factory=dict[str, dict[str, Any]])
+    model: FamilyModel | None = None
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -111,6 +113,7 @@ class FamilyResult:
             "validation": self.validation.to_json(),
             "accepted": self.accepted,
             "grid": self.grid,
+            "model": self.model.to_json() if self.model is not None else None,
         }
 
 
@@ -125,12 +128,15 @@ def to_symbol_data(bars: Sequence[Bar]) -> SymbolData | None:
     if len(bars) < MIN_BARS:
         return None
     arr = np.array(
-        [[float(b.open), float(b.high), float(b.low), float(b.close)] for b in bars],
+        [
+            [float(b.open), float(b.high), float(b.low), float(b.close), float(b.volume)]
+            for b in bars
+        ],
         dtype=np.float64,
     )
     return SymbolData(
         dates=[b.session_date for b in bars],
-        features=compute_features(arr[:, 0], arr[:, 1], arr[:, 2], arr[:, 3]),
+        features=compute_features(arr[:, 0], arr[:, 1], arr[:, 2], arr[:, 3], arr[:, 4]),
     )
 
 
@@ -152,6 +158,36 @@ class Calibration:
             "symbols": self.symbols,
             "families": {k: v.to_json() for k, v in self.families.items()},
         }
+
+
+def _fit_model(
+    data: Mapping[str, SymbolData],
+    per_symbol: Mapping[str, tuple[np.ndarray, np.ndarray]],
+    returns: Mapping[str, np.ndarray],
+) -> FamilyModel | None:
+    """Feature models for one family's chosen exit (train/validation split as above)."""
+    xs_tr, ys_tr, xs_va, ys_va = [], [], [], []
+    for sym, (idx, is_train) in per_symbol.items():
+        r = returns.get(sym)
+        if r is None:
+            continue
+        x = feature_matrix(data[sym].features, idx)
+        xs_tr.append(x[is_train])
+        ys_tr.append(r[is_train])
+        xs_va.append(x[~is_train])
+        ys_va.append(r[~is_train])
+    if not xs_tr:
+        return None
+    width = len(FEATURES)
+
+    def cat(parts: list[np.ndarray], two_d: bool) -> np.ndarray:
+        if not parts:
+            return np.empty((0, width)) if two_d else np.empty(0)
+        return np.concatenate(parts)
+
+    return fit_family_model(
+        cat(xs_tr, True), cat(ys_tr, False), cat(xs_va, True), cat(ys_va, False)
+    )
 
 
 def calibrate(
@@ -207,7 +243,10 @@ def calibrate(
             and val_stats.mean > 0
             and val_stats.t_stat >= MIN_VALIDATION_T
         )
-        families[fam.value] = FamilyResult(fam, chosen, train_stats, val_stats, accepted, grid)
+        model = _fit_model(data, per_symbol, returns_by_cfg.get(chosen.key, {}))
+        families[fam.value] = FamilyResult(
+            fam, chosen, train_stats, val_stats, accepted, grid, model
+        )
         for sym, r in returns_by_cfg.get(chosen.key, {}).items():
             stock_stats.setdefault(sym, {})[fam.value] = Stats.of(r).to_json()
         if progress is not None:

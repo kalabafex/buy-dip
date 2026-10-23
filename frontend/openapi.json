@@ -364,6 +364,211 @@
         "title": "EnabledIn",
         "type": "object"
       },
+      "EngineOut": {
+        "properties": {
+          "active": {
+            "$ref": "#/components/schemas/EngineVersionOut"
+          },
+          "reviews": {
+            "items": {
+              "$ref": "#/components/schemas/EngineReviewOut"
+            },
+            "title": "Reviews",
+            "type": "array"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/EngineVersionOut"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "active",
+          "versions",
+          "reviews"
+        ],
+        "title": "EngineOut",
+        "type": "object"
+      },
+      "EngineParamsOut": {
+        "properties": {
+          "certainty_a": {
+            "title": "Certainty A",
+            "type": "number"
+          },
+          "certainty_b": {
+            "title": "Certainty B",
+            "type": "number"
+          },
+          "family_multiplier": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Family Multiplier",
+            "type": "object"
+          },
+          "suspended": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suspended",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "family_multiplier",
+          "suspended",
+          "certainty_a",
+          "certainty_b"
+        ],
+        "title": "EngineParamsOut",
+        "type": "object"
+      },
+      "EngineReviewOut": {
+        "properties": {
+          "calibration": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewBin"
+            },
+            "title": "Calibration",
+            "type": "array"
+          },
+          "certainty": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "title": "Certainty",
+            "type": "object"
+          },
+          "changes": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "families": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ReviewStats"
+            },
+            "title": "Families",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "params_after": {
+            "$ref": "#/components/schemas/EngineParamsOut"
+          },
+          "params_before": {
+            "$ref": "#/components/schemas/EngineParamsOut"
+          },
+          "reviewed_on": {
+            "format": "date",
+            "title": "Reviewed On",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "version_after": {
+            "title": "Version After",
+            "type": "integer"
+          },
+          "version_before": {
+            "title": "Version Before",
+            "type": "integer"
+          },
+          "week_all": {
+            "$ref": "#/components/schemas/ReviewStats"
+          },
+          "week_picks": {
+            "$ref": "#/components/schemas/ReviewStats"
+          },
+          "window_all": {
+            "$ref": "#/components/schemas/ReviewStats"
+          },
+          "window_days": {
+            "title": "Window Days",
+            "type": "integer"
+          },
+          "window_picks": {
+            "$ref": "#/components/schemas/ReviewStats"
+          }
+        },
+        "required": [
+          "id",
+          "reviewed_on",
+          "version_before",
+          "version_after",
+          "summary",
+          "window_days",
+          "week_all",
+          "week_picks",
+          "window_all",
+          "window_picks",
+          "calibration",
+          "families",
+          "certainty",
+          "changes",
+          "params_before",
+          "params_after",
+          "created_at"
+        ],
+        "title": "EngineReviewOut",
+        "type": "object"
+      },
+      "EngineVersionOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "params": {
+            "$ref": "#/components/schemas/EngineParamsOut"
+          },
+          "review_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Id"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "params",
+          "review_id",
+          "created_at"
+        ],
+        "title": "EngineVersionOut",
+        "type": "object"
+      },
       "EvaluationOut": {
         "properties": {
           "condition_met": {
@@ -923,6 +1128,141 @@
         "title": "OrderStatus",
         "type": "string"
       },
+      "PickCandidateOut": {
+        "properties": {
+          "certainty_pct": {
+            "title": "Certainty Pct",
+            "type": "string"
+          },
+          "chosen": {
+            "title": "Chosen",
+            "type": "boolean"
+          },
+          "eligible": {
+            "title": "Eligible",
+            "type": "boolean"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "integer"
+          },
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "family_label": {
+            "title": "Family Label",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "plan_exit_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Exit Reason"
+          },
+          "plan_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Return Pct"
+          },
+          "projected_high_pct": {
+            "title": "Projected High Pct",
+            "type": "string"
+          },
+          "projected_low_pct": {
+            "title": "Projected Low Pct",
+            "type": "string"
+          },
+          "projected_move_pct": {
+            "title": "Projected Move Pct",
+            "type": "string"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/PickReason"
+            },
+            "title": "Reasons",
+            "type": "array"
+          },
+          "score_rank": {
+            "title": "Score Rank",
+            "type": "integer"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "score_rank",
+          "symbol",
+          "name",
+          "family",
+          "family_label",
+          "chosen",
+          "eligible",
+          "engine_version",
+          "projected_move_pct",
+          "projected_low_pct",
+          "projected_high_pct",
+          "certainty_pct",
+          "plan_return_pct",
+          "plan_exit_reason",
+          "reasons"
+        ],
+        "title": "PickCandidateOut",
+        "type": "object"
+      },
+      "PickContribution": {
+        "properties": {
+          "feature": {
+            "title": "Feature",
+            "type": "string"
+          },
+          "impact_pct": {
+            "title": "Impact Pct",
+            "type": "number"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "feature",
+          "label",
+          "value",
+          "impact_pct"
+        ],
+        "title": "PickContribution",
+        "type": "object"
+      },
       "PickFamilyOut": {
         "properties": {
           "accepted": {
@@ -1143,6 +1483,35 @@
             "title": "Accepted",
             "type": "boolean"
           },
+          "base_return_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Return Pct"
+          },
+          "certainty_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Certainty Pct"
+          },
+          "contributions": {
+            "items": {
+              "$ref": "#/components/schemas/PickContribution"
+            },
+            "title": "Contributions",
+            "type": "array"
+          },
           "day_close": {
             "anyOf": [
               {
@@ -1186,6 +1555,17 @@
               }
             ],
             "title": "Day Open"
+          },
+          "engine_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engine Version"
           },
           "entry_fill_price": {
             "anyOf": [
@@ -1323,6 +1703,28 @@
             ],
             "title": "Mode"
           },
+          "model_adjustment_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Adjustment Pct"
+          },
+          "multiplier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multiplier"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -1375,6 +1777,32 @@
             ],
             "title": "Plan Return Pct"
           },
+          "projected_high_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected High Pct"
+          },
+          "projected_low_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected Low Pct"
+          },
+          "projected_move_pct": {
+            "title": "Projected Move Pct",
+            "type": "string"
+          },
           "qty": {
             "anyOf": [
               {
@@ -1389,6 +1817,17 @@
           "rank": {
             "title": "Rank",
             "type": "integer"
+          },
+          "raw_certainty_pct": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Certainty Pct"
           },
           "realized_pnl_usd": {
             "anyOf": [
@@ -1411,6 +1850,13 @@
               }
             ],
             "title": "Realized Return Pct"
+          },
+          "reasons": {
+            "items": {
+              "$ref": "#/components/schemas/PickReason"
+            },
+            "title": "Reasons",
+            "type": "array"
           },
           "samples": {
             "title": "Samples",
@@ -1518,6 +1964,17 @@
           "win_rate",
           "samples",
           "family_mean_pct",
+          "projected_move_pct",
+          "projected_low_pct",
+          "projected_high_pct",
+          "certainty_pct",
+          "raw_certainty_pct",
+          "base_return_pct",
+          "model_adjustment_pct",
+          "multiplier",
+          "engine_version",
+          "reasons",
+          "contributions",
           "qty",
           "notional_usd",
           "expected_pnl_usd",
@@ -1541,6 +1998,46 @@
           "error"
         ],
         "title": "PickOut",
+        "type": "object"
+      },
+      "PickReason": {
+        "properties": {
+          "feature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature"
+          },
+          "impact_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impact Pct"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "text"
+        ],
+        "title": "PickReason",
         "type": "object"
       },
       "PicksDayOut": {
@@ -2712,6 +3209,217 @@
           "max_position_usd"
         ],
         "title": "RecommendedParams",
+        "type": "object"
+      },
+      "ReviewBin": {
+        "properties": {
+          "avg_certainty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Certainty"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "range": {
+            "title": "Range",
+            "type": "string"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate"
+          }
+        },
+        "required": [
+          "range",
+          "n",
+          "avg_certainty",
+          "win_rate"
+        ],
+        "title": "ReviewBin",
+        "type": "object"
+      },
+      "ReviewChange": {
+        "properties": {
+          "family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family"
+          },
+          "from": {
+            "title": "From"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "to": {
+            "title": "To"
+          }
+        },
+        "required": [
+          "kind",
+          "reason"
+        ],
+        "title": "ReviewChange",
+        "type": "object"
+      },
+      "ReviewStats": {
+        "properties": {
+          "avg_certainty": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Certainty"
+          },
+          "bias_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bias Pct"
+          },
+          "brier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brier"
+          },
+          "direction_hit_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction Hit Rate"
+          },
+          "implied_multiplier": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Implied Multiplier"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "mae_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mae Pct"
+          },
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "projected_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected Mean Pct"
+          },
+          "realized_mean_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Realized Mean Pct"
+          },
+          "t_stat": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "T Stat"
+          },
+          "win_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Win Rate"
+          }
+        },
+        "required": [
+          "n"
+        ],
+        "title": "ReviewStats",
         "type": "object"
       },
       "RuleOut": {
@@ -3916,6 +4624,61 @@
         ]
       }
     },
+    "/api/picks/candidates": {
+      "get": {
+        "description": "Every scored candidate of a day (the picks plus the runners-up), best first.",
+        "operationId": "picks_candidates_api_picks_candidates_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PickCandidateOut"
+                  },
+                  "title": "Response Picks Candidates Api Picks Candidates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Picks Candidates",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
     "/api/picks/day": {
       "get": {
         "description": "Picks for ``date`` (default: today in New York, or the latest day with picks).",
@@ -4011,6 +4774,49 @@
           }
         },
         "summary": "Picks Days",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
+    "/api/picks/engine": {
+      "get": {
+        "operationId": "picks_engine_api_picks_engine_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Picks Engine",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
+    "/api/picks/engine/review": {
+      "post": {
+        "description": "Run the weekly review now (it also runs automatically every weekend).",
+        "operationId": "picks_engine_review_now_api_picks_engine_review_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EngineReviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Picks Engine Review Now",
         "tags": [
           "picks"
         ]

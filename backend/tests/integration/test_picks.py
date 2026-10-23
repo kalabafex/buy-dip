@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import uuid
 from collections.abc import Iterator
 from decimal import Decimal as D
 from pathlib import Path
@@ -14,7 +15,13 @@ from dipbuyer.broker import FakeBroker
 from dipbuyer.data.bars import BarService
 from dipbuyer.data.market_data import FakeMarketData
 from dipbuyer.domain.models import Bar
-from dipbuyer.persistence.models import DailyPickRow, PickModelRow
+from dipbuyer.persistence.models import (
+    DailyPickRow,
+    EngineReviewRow,
+    EngineVersionRow,
+    PickCandidateRow,
+    PickModelRow,
+)
 from dipbuyer.picks import universe as universe_mod
 from dipbuyer.worker.picks_trader import PicksTrader
 from tests.integration.conftest import set_settings
@@ -118,8 +125,8 @@ def test_full_trading_day(env: Env) -> None:
     assert env.picks() == []
     env.at(13, 36)  # 9:36 ET
     picks = env.picks()
-    assert len(picks) == 5
-    assert [p.rank for p in picks] == [1, 2, 3, 4, 5]
+    assert len(picks) == 3
+    assert [p.rank for p in picks] == [1, 2, 3]
     assert all(p.status == "SUBMITTED" for p in picks), [(p.status, p.skip_reason) for p in picks]
     p1 = picks[0]
     assert p1.entry_time == dt.datetime(2025, 6, 10, 13, 35, tzinfo=UTC)
@@ -127,44 +134,119 @@ def test_full_trading_day(env: Env) -> None:
     assert p1.target_price is not None and p1.stop_price is not None
     assert p1.stop_price < p1.open_price < p1.entry_limit < p1.target_price
     assert p1.qty == int(D(1000) / p1.entry_limit)
-    assert len(env.broker.brackets) == 5
+    # engine outputs and the saved explanation
+    assert p1.certainty is not None and D(0) < p1.certainty < D(1)
+    assert p1.projected_low is not None and p1.projected_high is not None
+    assert p1.projected_low <= p1.expected_return <= p1.projected_high
+    assert p1.engine_version == 1
+    assert p1.reasons and p1.reasons[0]["kind"] == "setup"
+    assert {r["kind"] for r in p1.reasons} >= {"setup_history", "stock_history", "certainty"}
+    with env.sf() as s:
+        cands = list(s.scalars(select(PickCandidateRow).order_by(PickCandidateRow.score_rank)))
+    assert len(cands) > 3 and sum(c.chosen for c in cands) == 3
+    assert {c.symbol for c in cands if c.chosen} == {p.symbol for p in picks}
+    assert len(env.broker.brackets) == 3
     assert any(t.startswith("Daily picks") for t, _, _ in env.notifier.sent)
 
-    # fills: 1 -> target, 2 -> stop, 3 and 4 held, 5 never fills
-    for p in picks[:4]:
+    # fills: 1 -> target, 2 held to the forced exit, 3 never fills
+    for p in picks[:2]:
         env.broker.fill(str(p.id), p.entry_limit)
     env.broker.hit_exit(str(picks[0].id), "TARGET")
-    env.broker.hit_exit(str(picks[1].id), "STOP")
     env.at(13, 40)
     by_rank = {p.rank: p for p in env.picks()}
     assert by_rank[1].status == "EXITED" and by_rank[1].exit_reason == "TARGET"
     assert by_rank[1].realized_return is not None and by_rank[1].realized_return > 0
-    assert by_rank[2].status == "EXITED" and by_rank[2].exit_reason == "STOP"
-    assert by_rank[2].realized_pnl_usd is not None and by_rank[2].realized_pnl_usd < 0
-    assert by_rank[3].status == "ENTERED" and by_rank[5].status == "SUBMITTED"
+    assert by_rank[2].status == "ENTERED" and by_rank[3].status == "SUBMITTED"
 
-    for p in picks[2:4]:
-        env.broker.marks[p.symbol] = p.entry_limit * D("1.01")
+    env.broker.marks[picks[1].symbol] = picks[1].entry_limit * D("1.01")
     env.at(19, 56)  # forced exit at 15:56 ET
     by_rank = {p.rank: p for p in env.picks()}
-    assert by_rank[3].status == "EXITED" and by_rank[3].exit_reason == "TIME"
-    assert by_rank[3].realized_return == D("0.01")
-    assert by_rank[5].status == "NOT_FILLED"
-    # broker holds nothing from the picks any more
+    assert by_rank[2].status == "EXITED" and by_rank[2].exit_reason == "TIME"
+    assert by_rank[2].realized_return == D("0.01")
+    assert by_rank[3].status == "NOT_FILLED"
     assert all(h.qty == 0 for h in env.broker.holdings.values())
 
     add_today_bars(env)
-    env.at(20, 20)  # after close: evaluate the plans
+    env.at(20, 20)  # after close: evaluate the plans and every candidate
     for p in env.picks():
         assert p.plan_return is not None and p.plan_exit_reason in {"TARGET", "STOP", "TIME"}
         assert p.day_close is not None
+    with env.sf() as s:
+        cands = list(s.scalars(select(PickCandidateRow)))
+    assert all(c.plan_return is not None for c in cands)
     assert any(t.startswith("Daily picks results") for t, _, _ in env.notifier.sent)
+
+
+def test_stop_exit(env: Env) -> None:
+    env.calibrate()
+    set_settings(env.sf, picks_autotrade=True)
+    env.at(13, 36)
+    p = env.picks()[0]
+    env.broker.fill(str(p.id), p.entry_limit)
+    env.broker.hit_exit(str(p.id), "STOP")
+    env.at(13, 40)
+    p = env.picks()[0]
+    assert p.status == "EXITED" and p.exit_reason == "STOP"
+    assert p.realized_pnl_usd is not None and p.realized_pnl_usd < 0
+
+
+def test_weekly_review_creates_new_engine_version(env: Env) -> None:
+    env.calibrate()
+    env.at(13, 36)
+    add_today_bars(env)
+    env.at(20, 20)
+    # Synthetic history of overconfident projections for the gap setup.
+    with env.sf.begin() as s:
+        for k in range(40):
+            day = TODAY - dt.timedelta(days=1 + k)
+            s.add(
+                PickCandidateRow(
+                    id=uuid.uuid4(),
+                    session_date=day,
+                    score_rank=1,
+                    symbol=f"Z{k}",
+                    family="GAP_DOWN_REVERSAL",
+                    chosen=k % 5 == 0,
+                    eligible=True,
+                    engine_version=1,
+                    open_price=D(100),
+                    target_price=None,
+                    stop_price=None,
+                    projected_return=D("0.004"),
+                    projected_low=D("0"),
+                    projected_high=D("0.01"),
+                    certainty=D("0.6"),
+                    raw_certainty=D("0.6"),
+                    multiplier=D(1),
+                    features={},
+                    reasons=[],
+                    plan_return=D("0.0005") if k % 3 else D("-0.001"),
+                    plan_exit_reason="TIME",
+                )
+            )
+    # Not a weekend yet: nothing happens. Saturday morning: the review runs once.
+    assert env.trader.run_weekly_review() is False
+    env.clock.now = dt.datetime(2025, 6, 14, 14, 0, tzinfo=UTC)
+    assert env.trader.run_weekly_review() is True
+    assert env.trader.run_weekly_review() is False
+    with env.sf() as s:
+        rev = s.scalars(select(EngineReviewRow)).one()
+        versions = [v.version for v in s.scalars(select(EngineVersionRow))]
+    assert rev.version_before == 1 and rev.version_after == 2 and sorted(versions) == [1, 2]
+    assert any(c["family"] == "GAP_DOWN_REVERSAL" for c in rev.report["changes"])
+    assert any(t.startswith("Engine review v2") for t, _, _ in env.notifier.sent)
+    # the next day's picks use the tuned engine
+    with env.sf() as s:
+        from dipbuyer.worker.picks_trader import active_engine
+
+        params = active_engine(s)
+    assert params.version == 2 and params.multiplier("GAP_DOWN_REVERSAL") < 1
 
 
 def test_autotrade_off_shows_picks_without_trading(env: Env) -> None:
     env.calibrate()
     env.at(13, 36)
-    assert [p.status for p in env.picks()] == ["PLANNED"] * 5
+    assert [p.status for p in env.picks()] == ["PLANNED"] * 3
     assert env.broker.brackets == {}
     env.at(19, 56)
     assert {p.status for p in env.picks()} == {"NOT_TRADED"}
@@ -175,7 +257,7 @@ def test_live_mode_never_trades_picks(env: Env) -> None:
     set_settings(env.sf, picks_autotrade=True, trading_mode="LIVE")
     env.at(13, 36)
     assert env.broker.brackets == {}
-    assert len(env.picks()) == 5
+    assert len(env.picks()) == 3
 
 
 def test_kill_switch_blocks_pick_entries(env: Env) -> None:
@@ -235,17 +317,29 @@ def test_picks_api(env: Env, sf: sessionmaker[Session]) -> None:
         day = c.get("/api/picks/day").json()
         assert day["session_date"] == "2025-06-10" and day["generated"]
         assert day["entry_time"].startswith("2025-06-10T13:35")
-        assert len(day["picks"]) == 5 and day["model"]["status"] == "DONE"
+        assert len(day["picks"]) == 3 and day["model"]["status"] == "DONE"
         p = day["picks"][0]
         assert p["family_label"] == "Gap-down reversal"
         assert p["status"] == "EXITED" and p["exit_reason"] == "TARGET"
         assert D(p["realized_return_pct"]) > 0 and D(p["plan_return_pct"]) != 0
         assert D(p["target_pct"]) > 0 > D(p["stop_pct"])
+        assert 0 < D(p["certainty_pct"]) < 100
+        assert D(p["projected_low_pct"]) <= D(p["projected_move_pct"]) <= D(p["projected_high_pct"])
+        assert p["reasons"][0]["kind"] == "setup" and p["engine_version"] == 1
+        cands = c.get("/api/picks/candidates").json()
+        assert len(cands) > 3 and sum(x["chosen"] for x in cands) == 3
+        assert all(x["plan_return_pct"] is not None for x in cands)
+        eng = c.get("/api/picks/engine").json()
+        assert eng["active"]["version"] == 1 and eng["reviews"] == []
+        rev = c.post("/api/picks/engine/review")
+        assert rev.status_code == 201, rev.text
+        assert rev.json()["window_all"]["n"] == len(cands)
+        assert len(c.get("/api/picks/engine").json()["reviews"]) == 1
         assert day["realized_pnl_usd"] is not None
         days = c.get("/api/picks/days").json()
-        assert days[0]["picks"] == 5 and days[0]["traded"] == 5
+        assert days[0]["picks"] == 3 and days[0]["traded"] == 3
         perf = c.get("/api/picks/performance").json()
-        assert perf["days"] == 1 and perf["plan_evaluated"] == 5
+        assert perf["days"] == 1 and perf["plan_evaluated"] == 3
         assert "GAP_DOWN_REVERSAL" in perf["by_family"]
         model = c.get("/api/picks/model").json()
         assert any(f["accepted"] for f in model["families"])

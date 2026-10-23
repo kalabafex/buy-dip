@@ -72,7 +72,8 @@ def db_engine(pg_url: str) -> Iterator[Engine]:
 
 
 TABLES = (
-    "daily_picks, pick_models, recommendations, "
+    "engine_versions, engine_reviews, pick_candidates, daily_picks, pick_models, "
+    "recommendations, "
     "position_snapshots, account_snapshots, evaluations, order_intents, dip_cycles, "
     "backtests, bars_daily, audit_log, rules"
 )
@@ -89,6 +90,13 @@ def sf(db_engine: Engine) -> Iterator[sessionmaker[Session]]:
                 "picks_autotrade=false, picks_notional_usd=1000, picks_min_expected_pct=0.05, "
                 "max_weekly_spend_usd=1500, evaluation_interval_minutes=5, "
                 "open_exclusion_minutes=15, close_exclusion_minutes=10"
+            )
+        )
+        conn.execute(
+            text(
+                "INSERT INTO engine_versions (version, params, created_at) VALUES (1, "
+                '\'{"version": 1, "family_multiplier": {}, "suspended": [], '
+                '"certainty_a": 1.0, "certainty_b": 0.0}\'::jsonb, now())'
             )
         )
         conn.execute(

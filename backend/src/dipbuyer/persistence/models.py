@@ -283,6 +283,17 @@ class DailyPickRow(Base):
     win_rate: Mapped[Decimal]
     samples: Mapped[int] = mapped_column(Integer)
     family_mean: Mapped[Decimal]
+    # engine (projection, certainty and the recorded reasons)
+    projected_low: Mapped[Decimal | None]
+    projected_high: Mapped[Decimal | None]
+    certainty: Mapped[Decimal | None]
+    raw_certainty: Mapped[Decimal | None]
+    base_return: Mapped[Decimal | None]
+    model_adjustment: Mapped[Decimal | None]
+    multiplier: Mapped[Decimal | None]
+    engine_version: Mapped[int | None] = mapped_column(Integer)
+    reasons: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    contributions: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
     # trading
     status: Mapped[str] = mapped_column(String(16), index=True)
     skip_reason: Mapped[str | None] = mapped_column(Text)
@@ -308,6 +319,62 @@ class DailyPickRow(Base):
     plan_exit_price: Mapped[Decimal | None]
     created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(default=utcnow, onupdate=utcnow)
+
+
+class PickCandidateRow(Base):
+    """Every scored candidate of a day (picks and runners-up) and its outcome."""
+
+    __tablename__ = "pick_candidates"
+    __table_args__ = (
+        UniqueConstraint("session_date", "symbol", "family", name="uq_pick_candidates"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    session_date: Mapped[dt.date] = mapped_column(Date, index=True)
+    score_rank: Mapped[int] = mapped_column(Integer)
+    symbol: Mapped[str] = mapped_column(String(12))
+    family: Mapped[str] = mapped_column(String(32))
+    chosen: Mapped[bool] = mapped_column(Boolean)
+    eligible: Mapped[bool] = mapped_column(Boolean)
+    engine_version: Mapped[int] = mapped_column(Integer)
+    open_price: Mapped[Decimal]
+    target_price: Mapped[Decimal | None]
+    stop_price: Mapped[Decimal | None]
+    projected_return: Mapped[Decimal]
+    projected_low: Mapped[Decimal]
+    projected_high: Mapped[Decimal]
+    certainty: Mapped[Decimal]
+    raw_certainty: Mapped[Decimal]
+    multiplier: Mapped[Decimal]
+    features: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    reasons: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)
+    plan_return: Mapped[Decimal | None]
+    plan_exit_reason: Mapped[str | None] = mapped_column(String(16))
+    created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
+
+
+class EngineVersionRow(Base):
+    """Engine parameters tuned by weekly reviews (version 1 = untuned defaults)."""
+
+    __tablename__ = "engine_versions"
+
+    version: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=False)
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    review_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("engine_reviews.id"))
+    created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
+
+
+class EngineReviewRow(Base):
+    """A weekly comparison of predictions with outcomes, and the changes it made."""
+
+    __tablename__ = "engine_reviews"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    reviewed_on: Mapped[dt.date] = mapped_column(Date, index=True)
+    version_before: Mapped[int] = mapped_column(Integer)
+    version_after: Mapped[int] = mapped_column(Integer)
+    report: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
 
 
 class AuditLogRow(Base):
