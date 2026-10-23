@@ -7,6 +7,7 @@ import { EmptyState, ErrorBox, PageHeader } from "@/components/common";
 import { AutoTradeCard } from "@/components/picks/AutoTradeCard";
 import { CalibrationProgress, NoModelCard } from "@/components/picks/Calibration";
 import { PickCard } from "@/components/picks/PickCard";
+import { RunnersUp } from "@/components/picks/RunnersUp";
 import { DayTotals, PicksCaveat, PicksTabs } from "@/components/picks/sections";
 import { Timeline } from "@/components/picks/Timeline";
 import { Badge } from "@/components/ui/badge";
@@ -102,7 +103,7 @@ function Waiting({ day, now, isToday }: { day: PicksDay; now: number; isToday: b
               <span className="num text-primary">in {fmtCountdown(t.entry - now)}</span>
             </>
           }
-          description="Five minutes after the open the worker reads every stock's opening price, ranks the setups that fire and publishes the top 5 here (and as an alert). With auto-trade on, orders go in right away."
+          description="Five minutes after the open the worker reads every stock's opening price, scores every setup that fires and publishes the top 3 here (and as an alert), each with a projected move, a certainty and its reasons. With auto-trade on, orders go in right away."
           className="py-12"
         />
       </Card>
@@ -193,7 +194,7 @@ export function PicksPage() {
   const header = (
     <PageHeader
       title="Daily picks"
-      subtitle="Five intraday setups from the S&P 500 each trading day, with an exact plan: when to buy, the limit, the target, the stop and the latest exit."
+      subtitle="Three intraday picks from the S&P 500 each trading day, each with a projected move, how certain the engine is, why it chose it, and an exact plan: when to buy, the limit, the target, the stop and the latest exit."
       actions={<PicksTabs />}
     />
   );
@@ -251,6 +252,7 @@ export function PicksPage() {
             <PickCard key={p.id} pick={p} />
           ))}
         </section>
+        <RunnersUp date={day.session_date} enabled={day.generated} />
       </>
     );
   }

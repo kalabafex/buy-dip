@@ -1,4 +1,4 @@
-import { CalendarCheck, LineChart, SlidersHorizontal, Target, Trophy, Wallet } from "lucide-react";
+import { CalendarCheck, Cpu, LineChart, SlidersHorizontal, Target, Trophy, Wallet } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { Callout, Signed } from "@/components/common";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -10,14 +10,15 @@ const TABS = [
   { to: "/", label: "Today", icon: CalendarCheck, end: true },
   { to: "/picks/performance", label: "Performance", icon: LineChart, end: false },
   { to: "/picks/model", label: "Model", icon: SlidersHorizontal, end: false },
+  { to: "/picks/engine", label: "Engine", icon: Cpu, end: false },
 ];
 
-/** Link tabs shared by the three daily-picks pages (styled like <TabsList>). */
+/** Link tabs shared by the daily-picks pages (styled like <TabsList>). */
 export function PicksTabs({ className }: { className?: string }) {
   return (
     <nav
       aria-label="Daily picks"
-      className={cn("inline-flex h-9 items-center gap-0.5 rounded-lg bg-muted p-0.5 text-muted-foreground", className)}
+      className={cn("scrollbar-thin inline-flex h-9 max-w-full items-center gap-0.5 overflow-x-auto rounded-lg bg-muted p-0.5 text-muted-foreground", className)}
     >
       {TABS.map(({ to, label, icon: Icon, end }) => (
         <NavLink
@@ -26,7 +27,7 @@ export function PicksTabs({ className }: { className?: string }) {
           end={end}
           className={({ isActive }) =>
             cn(
-              "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-xs font-medium transition-all hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "inline-flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 text-xs sm:px-3 font-medium transition-all hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               isActive && "bg-card text-foreground shadow-sm",
             )
           }
@@ -39,10 +40,13 @@ export function PicksTabs({ className }: { className?: string }) {
   );
 }
 
-/** Day totals: average expected vs plan return, realized P/L and wins. */
+const avg = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+/** Day totals: average projected move vs plan return, realized P/L and wins. */
 export function DayTotals({ day }: { day: PicksDay }) {
   const picks = day.picks;
-  const exp = picks.length ? picks.reduce((a, p) => a + (num(p.expected_return_pct) ?? 0), 0) / picks.length : null;
+  const exp = avg(picks.map((p) => num(p.projected_move_pct) ?? num(p.expected_return_pct) ?? 0));
+  const cert = avg(picks.map((p) => num(p.certainty_pct)).filter((v): v is number => v !== null));
   const plan = num(day.plan_return_avg_pct);
   const evaluated = picks.filter((p) => p.plan_return_pct != null);
   const planWins = evaluated.filter((p) => (num(p.plan_return_pct) ?? 0) > 0).length;
@@ -54,11 +58,15 @@ export function DayTotals({ day }: { day: PicksDay }) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard
-        title="Avg expected"
+        title="Avg projected"
         icon={Target}
         valueClassName="proportional"
         value={<Signed value={exp}>{fmtPct(exp, 2, true)}</Signed>}
-        sub={`${picks.length} pick${picks.length === 1 ? "" : "s"} · ${tradeable} tradeable`}
+        sub={
+          cert !== null
+            ? `${Math.round(cert)}% avg certainty${tradeable < picks.length ? ` · ${picks.length - tradeable} watch` : ""}`
+            : `${picks.length} pick${picks.length === 1 ? "" : "s"} · ${tradeable} tradeable`
+        }
       />
       <StatCard
         title="Avg plan return"
@@ -96,9 +104,13 @@ export function DayTotals({ day }: { day: PicksDay }) {
 
 export function PicksCaveat() {
   return (
-    <Callout tone="warning" title="Expected returns are historical averages, not predictions">
+    <Callout tone="warning" title="Projections come from history, not foresight">
       <ul className="list-disc space-y-1 pl-4">
-        <li>Single days often lose even when the average is positive; judge the picks over many days.</li>
+        <li>
+          A projected move is an average outcome and certainty a probability: single days often lose even
+          at 60%. Judge the picks over many days.
+        </li>
+        <li>The weekly review checks both against live results and scales them down when they run hot.</li>
         <li>
           The simulation is conservative: when both the target and the stop are inside the day's range, the
           stop is assumed to hit first.

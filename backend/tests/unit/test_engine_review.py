@@ -139,3 +139,12 @@ def test_review_recalibrates_overconfident_certainty() -> None:
     assert rep["certainty"]["brier_after"] < rep["certainty"]["brier_before"]
     assert rep["window"]["calibration"]
     assert rep["week"]["all"]["n"] > 0 and rep["week"]["picks"]["n"] > 0
+
+
+def test_review_ignores_outcomes_after_review_date() -> None:
+    future = [
+        Outcome(TODAY + dt.timedelta(days=3), "BREAKOUT_20D", False, 0.003, 1.0, 0.6, 0.6, -0.004)
+        for _ in range(80)
+    ]
+    new, rep = review(future, EngineParams(), TODAY)
+    assert rep["window"]["all"]["n"] == 0 and new.version == 1

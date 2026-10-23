@@ -48,7 +48,10 @@ export function fmtUsdSigned(v: Num, opts: { short?: boolean } = {}): string {
 export function fmtPts(v: Num, digits = 1): string {
   const n = toNum(v);
   if (n === null) return "—";
-  return `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(digits)} pts`;
+  const body = Math.abs(n).toFixed(digits);
+  // No sign on a value that rounds to zero ("−0.00 pts" reads as a loss).
+  const zero = Number(body) === 0;
+  return `${zero ? "" : n > 0 ? "+" : "−"}${body} pts`;
 }
 
 /** Price with up to 4 decimals (sub-dollar prices). */
@@ -68,7 +71,8 @@ export function fmtPct(v: Num, digits = 2, signed = false): string {
   const n = toNum(v);
   if (n === null) return "—";
   const s = Math.abs(n).toFixed(digits);
-  return `${n < 0 ? "−" : signed && n > 0 ? "+" : ""}${s}%`;
+  const zero = Number(s) === 0;
+  return `${zero ? "" : n < 0 ? "−" : signed && n > 0 ? "+" : ""}${s}%`;
 }
 
 export function fmtNum(v: Num, maxDigits = 4): string {

@@ -127,7 +127,9 @@ def run_engine_review(s: Session, today: dt.date) -> EngineReviewRow:
     since = today - dt.timedelta(days=90)
     rows = s.scalars(
         select(PickCandidateRow).where(
-            PickCandidateRow.session_date >= since, PickCandidateRow.plan_return.is_not(None)
+            PickCandidateRow.session_date >= since,
+            PickCandidateRow.session_date <= today,
+            PickCandidateRow.plan_return.is_not(None),
         )
     ).all()
     outcomes = [

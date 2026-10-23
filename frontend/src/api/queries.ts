@@ -26,6 +26,9 @@ export const qk = {
   picksPerformance: ["picks", "performance"] as const,
   picksModel: ["picks", "model"] as const,
   picksSettings: ["picks", "settings"] as const,
+  picksCandidates: (date: string | null) => ["picks", "candidates", date ?? "today"] as const,
+  /** Engine versions + weekly reviews (under the picks prefix, so SSE `picks` events refresh it). */
+  picksEngine: ["picks", "engine"] as const,
 };
 
 export type OrdersQuery = QueryOf<"/api/orders", "get">;
@@ -230,5 +233,25 @@ export function usePicksModel() {
       const s = query.state.data?.status;
       return s && CALIBRATING.includes(s) ? 5_000 : false;
     },
+  });
+}
+
+/** Every scored candidate of a day: the 3 picks plus the runners-up (shadow-tracked). */
+export function usePicksCandidates(date: string | null, enabled = true) {
+  return useQuery({
+    queryKey: qk.picksCandidates(date),
+    queryFn: ({ signal }) => api.get("/api/picks/candidates", { query: { date }, signal }),
+    enabled,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+}
+
+/** Active engine version, version history and weekly reviews (newest first). */
+export function usePicksEngine() {
+  return useQuery({
+    queryKey: qk.picksEngine,
+    queryFn: ({ signal }) => api.get("/api/picks/engine", { signal }),
+    staleTime: 60_000,
   });
 }

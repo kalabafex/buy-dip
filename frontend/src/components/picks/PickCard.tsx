@@ -1,8 +1,11 @@
-import { AlertTriangle, Check, Clock, Eye, LogIn, ShieldAlert, Target, X } from "lucide-react";
+import { AlertTriangle, Check, Clock, Cpu, Eye, LogIn, ShieldAlert, Target, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Signed } from "@/components/common";
 import { PriceLadder } from "@/components/picks/PriceLadder";
-import { Eyebrow, PickStatusBadge, WinRateBar } from "@/components/picks/parts";
+import { Eyebrow, PickStatusBadge } from "@/components/picks/parts";
+import { CertaintyFigure, ProjectedMove } from "@/components/picks/Projection";
+import { WhyThisPick } from "@/components/picks/WhyThisPick";
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { InfoPopover } from "@/components/ui/popover";
 import { fmtNum, fmtPct, fmtPrice, fmtUsd, fmtUsdSigned } from "@/lib/format";
@@ -232,8 +235,9 @@ function Outcome({ pick }: { pick: Pick }) {
 export function PickCard({ pick }: { pick: Pick }) {
   const watch = pick.status === "WATCH";
   const top = pick.rank === 1 && !watch;
-  const expected = num(pick.expected_return_pct) ?? 0;
-  const win = num(pick.win_rate) ?? 0;
+  const projected = num(pick.projected_move_pct) ?? num(pick.expected_return_pct) ?? 0;
+  const certainty = num(pick.certainty_pct);
+  const winRate = num(pick.win_rate);
   const gap = featureNum(pick, "gap_pct");
   const atrPct = featureNum(pick, "atr_pct");
   const rsi2 = featureNum(pick, "rsi2");
@@ -301,7 +305,18 @@ export function PickCard({ pick }: { pick: Pick }) {
             )}
           </div>
         </div>
-        <PickStatusBadge status={pick.status} exitReason={pick.exit_reason} className="mt-1" />
+        <div className="mt-1 flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center">
+          <PickStatusBadge status={pick.status} exitReason={pick.exit_reason} />
+          {pick.engine_version != null && (
+            <Badge
+              variant="outline"
+              title={`Scored by picks engine version ${pick.engine_version} (weekly-review parameters in force that day)`}
+            >
+              <Cpu className="h-3 w-3" aria-hidden />
+              Engine v{pick.engine_version}
+            </Badge>
+          )}
+        </div>
       </div>
 
       {watch && pick.skip_reason && (
@@ -323,60 +338,27 @@ export function PickCard({ pick }: { pick: Pick }) {
         </div>
       )}
 
-      <div
-        className={cn(
-          "grid grid-cols-1 gap-5 p-4 sm:p-5 md:grid-cols-2 2xl:grid-cols-[minmax(0,4fr)_minmax(0,5fr)_minmax(0,5fr)]",
-          watch && "opacity-80",
+      {/* Hero numbers */}
+      <div className={cn("grid grid-cols-2 gap-x-5 gap-y-4 border-b px-4 py-4 sm:gap-x-8 sm:px-5", watch && "opacity-80")}>
+        <ProjectedMove
+          value={projected}
+          low={num(pick.projected_low_pct)}
+          high={num(pick.projected_high_pct)}
+          sub={
+            pick.expected_pnl_usd && pick.notional_usd
+              ? `≈ ${fmtUsdSigned(pick.expected_pnl_usd)} on ${fmtUsd(pick.notional_usd)}`
+              : "entry to exit, after costs"
+          }
+        />
+        {certainty !== null ? (
+          <CertaintyFigure value={certainty} raw={num(pick.raw_certainty_pct)} />
+        ) : (
+          <CertaintyFigure value={(winRate ?? 0) * 100} historical />
         )}
-      >
-        {/* Expected */}
-        <div className="grid content-start gap-3">
-          <div>
-            <Eyebrow>Expected return</Eyebrow>
-            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-              <span
-                className={cn(
-                  "proportional text-3xl font-semibold tracking-tight",
-                  expected > 0 ? "text-gain" : expected < 0 ? "text-loss" : "",
-                )}
-              >
-                {fmtPct(expected, 2, true)}
-              </span>
-              {pick.expected_pnl_usd && pick.notional_usd ? (
-                <span className="num text-xs text-muted-foreground">
-                  ≈ {fmtUsdSigned(pick.expected_pnl_usd)} on {fmtUsd(pick.notional_usd)}
-                </span>
-              ) : (
-                <span className="text-xs text-muted-foreground">per trade, after costs</span>
-              )}
-            </div>
-          </div>
-          <div className="grid gap-1.5">
-            <div className="flex items-baseline justify-between text-xs">
-              <span className="text-muted-foreground">Win rate</span>
-              <span className="num font-semibold">{Math.round(win * 100)}%</span>
-            </div>
-            <WinRateBar rate={win} label={`Historical win rate ${Math.round(win * 100)}%`} />
-          </div>
-          <p className="text-2xs leading-4 text-muted-foreground">
-            {pick.samples > 0 ? (
-              <>
-                Based on <span className="num font-medium text-foreground">{pick.samples}</span> past
-                occurrence{pick.samples === 1 ? "" : "s"} for this stock, blended with the setup average of{" "}
-                <span className="num font-medium text-foreground">{fmtPct(pick.family_mean_pct, 2, true)}</span>{" "}
-                across all stocks.
-              </>
-            ) : (
-              <>
-                No past occurrences for this stock — uses the setup average of{" "}
-                <span className="num font-medium text-foreground">{fmtPct(pick.family_mean_pct, 2, true)}</span>{" "}
-                across all stocks.
-              </>
-            )}
-          </p>
-          {facts.length > 0 && <p className="num text-2xs text-muted-foreground sm:hidden">{facts.join(" · ")}</p>}
-        </div>
+        {facts.length > 0 && <p className="num col-span-2 text-2xs text-muted-foreground sm:hidden">{facts.join(" · ")}</p>}
+      </div>
 
+      <div className={cn("grid grid-cols-1 gap-5 p-4 sm:p-5 md:grid-cols-2 2xl:grid-cols-3", watch && "opacity-80")}>
         {/* Plan */}
         <div className="grid content-start gap-2">
           <Eyebrow>The plan</Eyebrow>
@@ -384,7 +366,7 @@ export function PickCard({ pick }: { pick: Pick }) {
         </div>
 
         {/* Levels + outcome */}
-        <div className="grid content-start gap-5 border-t pt-4 md:col-span-2 md:grid-cols-2 2xl:col-span-1 2xl:grid-cols-1 2xl:border-t-0 2xl:pt-0">
+        <div className="grid content-start gap-5 border-t pt-4 md:border-t-0 md:pt-0 2xl:contents">
           <div className="grid content-start gap-1.5">
             <Eyebrow>Levels</Eyebrow>
             <PriceLadder pick={pick} />
@@ -392,6 +374,8 @@ export function PickCard({ pick }: { pick: Pick }) {
           <Outcome pick={pick} />
         </div>
       </div>
+
+      <WhyThisPick pick={pick} />
     </Card>
   );
 }

@@ -145,7 +145,7 @@ export function AutoTradeCard({ settings }: { settings: PicksSettings }) {
             </FormField>
             <FormField
               id="picks-min"
-              label="Min expected"
+              label="Min projected"
               error={errors.min_expected_pct?.message}
               hint="Lower → watch only"
             >

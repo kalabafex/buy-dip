@@ -9,7 +9,8 @@ const INVALIDATES: Record<string, QueryKey[]> = {
   evaluation: [["evaluations"], qk.rules],
   order: [["orders"], qk.account, qk.positions, qk.settings, qk.rules],
   settings: [qk.settings, qk.rules, qk.picks],
-  // {session_date,...} on publish/evaluation, {id,status} per pick, {model, progress|status}.
+  // {session_date,...} on publish/evaluation, {id,status} per pick, {model, progress|status},
+  // {review, version} after a weekly engine review (qk.picks also covers candidates + engine).
   picks: [qk.picks],
 };
 

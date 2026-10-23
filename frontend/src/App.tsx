@@ -6,6 +6,7 @@ import { BacktestPage } from "@/pages/Backtest";
 import { DashboardPage } from "@/pages/Dashboard";
 import { LoginPage } from "@/pages/Login";
 import { PicksPage } from "@/pages/Picks";
+import { PicksEnginePage } from "@/pages/PicksEngine";
 import { PicksModelPage } from "@/pages/PicksModel";
 import { PicksPerformancePage } from "@/pages/PicksPerformance";
 import { RecommendationsPage } from "@/pages/Recommendations";
@@ -25,6 +26,7 @@ export function App() {
             <Route path="picks" element={<Navigate to="/" replace />} />
             <Route path="picks/performance" element={<PicksPerformancePage />} />
             <Route path="picks/model" element={<PicksModelPage />} />
+            <Route path="picks/engine" element={<PicksEnginePage />} />
             <Route path="dashboard" element={<DashboardPage />} />
             <Route path="rules" element={<RulesPage />} />
             <Route path="rules/new" element={<RuleEditPage />} />

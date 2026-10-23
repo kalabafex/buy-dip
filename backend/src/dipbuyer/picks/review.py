@@ -100,7 +100,7 @@ def _label(fam: str) -> str:
 def review(
     outcomes: Sequence[Outcome], params: EngineParams, today: dt.date
 ) -> tuple[EngineParams, dict[str, Any]]:
-    window = [o for o in outcomes if (today - o.session_date).days <= WINDOW_DAYS]
+    window = [o for o in outcomes if 0 <= (today - o.session_date).days <= WINDOW_DAYS]
     week = [o for o in window if (today - o.session_date).days <= WEEK_DAYS]
     changes: list[dict[str, Any]] = []
     new = EngineParams(

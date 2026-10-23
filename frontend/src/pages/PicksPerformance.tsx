@@ -1,16 +1,18 @@
-import { CalendarDays, CheckCircle2, Layers, LineChart, Scale, Trophy, Wallet, Zap } from "lucide-react";
+import { CalendarDays, CheckCircle2, ClipboardCheck, Layers, LineChart, Scale, Trophy, Wallet, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { usePicksDays, usePicksPerformance } from "@/api/queries";
+import { usePicksDays, usePicksEngine, usePicksPerformance } from "@/api/queries";
 import { EmptyState, ErrorBox, PageHeader, Signed } from "@/components/common";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { CumulativeChart } from "@/components/picks/CumulativeChart";
 import { PicksTabs } from "@/components/picks/sections";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeaderRow } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fmtPct, fmtPts, fmtUsdSigned } from "@/lib/format";
+import { pct01 } from "@/lib/engine";
 import { fmtSessionDate, num } from "@/lib/picks";
 
 type FamilyRow = { key: string; label: string; n: number; wins: number; win_rate: number; avg_pct: number };
@@ -29,6 +31,71 @@ function familyRows(by: Record<string, Record<string, unknown>> | undefined): Fa
 }
 
 const pct0 = (r: number | null | undefined) => (r == null ? "—" : `${Math.round(r * 100)}%`);
+
+/** Latest weekly review: are projections and certainties honest on live results? */
+function LiveCheck() {
+  const q = usePicksEngine();
+  const rev = q.data?.reviews[0];
+  if (!rev) return null;
+  const w = rev.window_all;
+  const p = rev.window_picks;
+  const weeks = Math.round(rev.window_days / 7);
+  const items = [
+    {
+      label: "Projected → realized, avg",
+      value: (
+        <>
+          {fmtPct(w.projected_mean_pct, 2, true)} <span className="text-muted-foreground">→</span>{" "}
+          <Signed value={w.realized_mean_pct ?? null}>{fmtPct(w.realized_mean_pct, 2, true)}</Signed>
+        </>
+      ),
+      sub: `picks only: ${fmtPct(p.projected_mean_pct, 2, true)} → ${fmtPct(p.realized_mean_pct, 2, true)}`,
+    },
+    {
+      label: "Certainty → actual win rate",
+      value: (
+        <>
+          {pct01(w.avg_certainty)} <span className="text-muted-foreground">→</span> {pct01(w.win_rate)}
+        </>
+      ),
+      sub: `picks only: ${pct01(p.avg_certainty)} → ${pct01(p.win_rate)}`,
+    },
+    {
+      label: "Direction right",
+      value: pct01(w.direction_hit_rate),
+      sub: `${w.n} scored candidates`,
+    },
+  ];
+  return (
+    <Card>
+      <CardHeaderRow
+        title={
+          <>
+            <ClipboardCheck className="h-4 w-4 text-muted-foreground" aria-hidden /> Live check · weekly review of{" "}
+            {fmtSessionDate(rev.reviewed_on, { year: false })}
+          </>
+        }
+        description={`Picks and runners-up of the last ${weeks} weeks: what the engine projected versus what following each plan returned.`}
+        actions={
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/picks/engine">Engine details</Link>
+          </Button>
+        }
+      />
+      <CardContent>
+        <dl className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          {items.map((it) => (
+            <div key={it.label} className="min-w-0 rounded-lg border bg-muted/30 px-3 py-2">
+              <dt className="text-2xs text-muted-foreground">{it.label}</dt>
+              <dd className="proportional mt-0.5 text-base font-semibold leading-6 tracking-tight">{it.value}</dd>
+              <dd className="num text-2xs leading-4 text-muted-foreground">{it.sub}</dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function PicksPerformancePage() {
   const perf = usePicksPerformance();
@@ -64,7 +131,7 @@ export function PicksPerformancePage() {
         <StatCard
           hero
           className="col-span-2"
-          title="Avg plan return vs expected · calibration check"
+          title="Avg plan return vs projected · calibration check"
           icon={Scale}
           loading={perf.isPending}
           valueClassName="proportional"
@@ -73,7 +140,7 @@ export function PicksPerformancePage() {
               <span className="flex flex-wrap items-baseline gap-x-2">
                 <Signed value={planAvg}>{fmtPct(planAvg, 2, true)}</Signed>
                 <span className="text-sm font-medium text-muted-foreground">
-                  vs {fmtPct(expAvg, 2, true)} expected
+                  vs {fmtPct(expAvg, 2, true)} projected
                 </span>
               </span>
             ) : (
@@ -83,7 +150,7 @@ export function PicksPerformancePage() {
           sub={
             gap !== null ? (
               <>
-                Plan minus expected, per pick{" "}
+                Plan minus projected, per pick{" "}
                 <Signed value={gap} className="font-medium">
                   {fmtPts(gap, 2)}
                 </Signed>
@@ -142,6 +209,8 @@ export function PicksPerformancePage() {
           sub="paper account"
         />
       </div>
+
+      <LiveCheck />
 
       <Card>
         <CardHeaderRow
@@ -241,7 +310,7 @@ export function PicksPerformancePage() {
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Day</TableHead>
                   <TableHead className="text-right">Picks</TableHead>
-                  <TableHead className="text-right">Expected</TableHead>
+                  <TableHead className="text-right">Projected</TableHead>
                   <TableHead className="text-right">Plan</TableHead>
                   <TableHead className="text-right">Plan wins</TableHead>
                   <TableHead className="text-right">Traded</TableHead>
