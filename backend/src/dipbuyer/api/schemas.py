@@ -619,3 +619,27 @@ class EngineOut(BaseModel):
     active: EngineVersionOut
     versions: list[EngineVersionOut]
     reviews: list[EngineReviewOut]
+
+
+class QuotePoint(BaseModel):
+    ts: dt.datetime
+    price: Decimal
+
+
+class SymbolQuotes(BaseModel):
+    symbol: str
+    last: Decimal
+    open: Decimal
+    change_pct: Decimal
+    """Last price vs the day's open, in percent."""
+    ts: dt.datetime
+    series: list[QuotePoint]
+    """Intraday samples, oldest first (downsampled to at most ~400 points)."""
+
+
+class PicksQuotesOut(BaseModel):
+    session_date: dt.date
+    market_open: bool
+    interval_seconds: int
+    as_of: dt.datetime | None
+    quotes: list[SymbolQuotes]

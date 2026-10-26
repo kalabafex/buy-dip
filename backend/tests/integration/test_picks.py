@@ -357,3 +357,57 @@ def test_picks_api(env: Env, sf: sessionmaker[Session]) -> None:
             json={"autotrade": True, "notional_usd": 500, "min_expected_pct": 0.1},
         )
         assert r.status_code == 409
+
+
+def test_live_quotes_poll_and_api(env: Env, sf: sessionmaker[Session]) -> None:
+    import pyotp
+    from fastapi.testclient import TestClient
+
+    from dipbuyer.api.app import create_app
+    from dipbuyer.api.deps import AppDeps
+    from dipbuyer.persistence.models import PickQuoteRow
+    from tests.integration.test_api import PASSWORD, make_env
+
+    env.calibrate()
+    env.clock.now = dt.datetime(2025, 6, 10, 13, 0, tzinfo=UTC)
+    assert env.trader.poll_quotes() == 0  # before the open: nothing
+    env.at(13, 36)
+    picked = {p.symbol for p in env.picks()}
+    assert env.trader.poll_quotes() > 0  # picks + top runners-up
+    assert env.trader.poll_quotes() == 0  # unchanged prices are not stored twice
+    sym = sorted(picked)[0]
+    snap = env.md.snapshots[sym]
+    env.clock.now = dt.datetime(2025, 6, 10, 13, 37, tzinfo=UTC)
+    env.md.snapshots[sym] = snap.model_copy(
+        update={"last": snap.last * D("1.01"), "as_of": env.clock.now}
+    )
+    assert env.trader.poll_quotes() == 1
+    with env.sf() as s:
+        rows = list(s.scalars(select(PickQuoteRow).where(PickQuoteRow.symbol == sym)))
+        n_symbols = len(set(s.scalars(select(PickQuoteRow.symbol))))
+    assert len(rows) == 2
+    assert len(picked) < n_symbols <= 13
+    env.clock.now = dt.datetime(2025, 6, 10, 21, 0, tzinfo=UTC)
+    assert env.trader.poll_quotes() == 0  # after the close
+
+    app_env = make_env()
+    deps = AppDeps(
+        env=app_env,
+        session_factory=sf,
+        asset_lookup=lambda *_: None,  # type: ignore[arg-type]
+        bar_service=lambda _m: None,  # type: ignore[arg-type,return-value]
+        notifier=RecordingNotifier(),
+        enable_listener=False,
+        now=lambda: dt.datetime(2025, 6, 10, 14, 0, tzinfo=UTC),
+    )
+    with TestClient(create_app(deps)) as c:
+        code = pyotp.TOTP(app_env.app_totp_secret.get_secret_value()).now()
+        c.post("/api/auth/login", json={"username": "admin", "password": PASSWORD, "totp": code})
+        q = c.get("/api/picks/quotes").json()
+        assert q["session_date"] == "2025-06-10" and q["market_open"] is True
+        assert q["interval_seconds"] == 15
+        by = {x["symbol"]: x for x in q["quotes"]}
+        assert picked <= set(by)
+        assert len(by[sym]["series"]) == 2
+        assert D(by[sym]["last"]) == snap.last * D("1.01")
+        assert D(by[sym]["open"]) == snap.open and by[sym]["change_pct"] is not None

@@ -29,6 +29,8 @@ export const qk = {
   picksCandidates: (date: string | null) => ["picks", "candidates", date ?? "today"] as const,
   /** Engine versions + weekly reviews (under the picks prefix, so SSE `picks` events refresh it). */
   picksEngine: ["picks", "engine"] as const,
+  /** Live intraday prices (own prefix: updated in place by SSE `picks_quote`, not invalidated). */
+  picksQuotes: (date: string | null) => ["picksQuotes", date ?? "today"] as const,
 };
 
 export type OrdersQuery = QueryOf<"/api/orders", "get">;
@@ -253,5 +255,19 @@ export function usePicksEngine() {
     queryKey: qk.picksEngine,
     queryFn: ({ signal }) => api.get("/api/picks/engine", { signal }),
     staleTime: 60_000,
+  });
+}
+
+/**
+ * Latest price and intraday samples for a day's picks and top runners-up. SSE
+ * `picks_quote` events patch this cache in place (see useEventStream); the interval
+ * refetch is only a fallback while the market is open.
+ */
+export function usePicksQuotes(date: string | null, enabled = true) {
+  return useQuery({
+    queryKey: qk.picksQuotes(date),
+    queryFn: ({ signal }) => api.get("/api/picks/quotes", { query: { date }, signal }),
+    enabled,
+    refetchInterval: (query) => (query.state.data?.market_open ? 60_000 : false),
   });
 }

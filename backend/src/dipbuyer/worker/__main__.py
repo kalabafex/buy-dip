@@ -21,7 +21,7 @@ from dipbuyer.logging_setup import setup_logging
 from dipbuyer.persistence.db import get_engine, make_session_factory
 from dipbuyer.worker.backtest_runner import run_queued
 from dipbuyer.worker.loop import TradingLoop
-from dipbuyer.worker.picks_trader import PicksTrader
+from dipbuyer.worker.picks_trader import QUOTE_INTERVAL_SECONDS, PicksTrader
 from dipbuyer.worker.recommendation_runner import run_queued as run_recommendations
 
 log = logging.getLogger("dipbuyer.worker")
@@ -80,6 +80,12 @@ def main() -> None:
             log.exception("picks tick failed")
             notifier.send("Worker exception", f"daily picks: {exc}", priority="high")
 
+    def quotes_job() -> None:
+        try:
+            picks.poll_quotes()
+        except Exception:
+            log.exception("picks quotes poll failed")
+
     def calibration_job() -> None:
         try:
             picks.run_calibrations()
@@ -125,6 +131,14 @@ def main() -> None:
     )
     sched.add_job(backtest_job, "interval", seconds=10, id="backtests", max_instances=1)
     sched.add_job(picks_job, "interval", minutes=1, id="picks", max_instances=1, coalesce=True)
+    sched.add_job(
+        quotes_job,
+        "interval",
+        seconds=QUOTE_INTERVAL_SECONDS,
+        id="quotes",
+        max_instances=1,
+        coalesce=True,
+    )
     sched.add_job(
         calibration_job, "interval", seconds=30, id="calibration", max_instances=1, coalesce=True
     )

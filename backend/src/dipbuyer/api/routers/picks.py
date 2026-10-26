@@ -26,11 +26,14 @@ from dipbuyer.api.schemas import (
     PicksDaySummary,
     PicksPerformanceOut,
     PicksPerformancePoint,
+    PicksQuotesOut,
     PicksSettingsIn,
     PicksSettingsOut,
+    QuotePoint,
     ReviewBin,
     ReviewChange,
     ReviewStats,
+    SymbolQuotes,
 )
 from dipbuyer.data.calendar import ny_date, session_for
 from dipbuyer.domain.enums import BacktestStatus
@@ -42,12 +45,18 @@ from dipbuyer.persistence.models import (
     EngineVersionRow,
     PickCandidateRow,
     PickModelRow,
+    PickQuoteRow,
 )
 from dipbuyer.picks.engine import FEATURE_LABELS
 from dipbuyer.picks.select import entry_exit_times
 from dipbuyer.picks.strategies import FAMILY_DESCRIPTIONS, FAMILY_LABELS, Family
 from dipbuyer.picks.universe import members_by_symbol
-from dipbuyer.worker.picks_trader import latest_model, queue_calibration, run_engine_review
+from dipbuyer.worker.picks_trader import (
+    QUOTE_INTERVAL_SECONDS,
+    latest_model,
+    queue_calibration,
+    run_engine_review,
+)
 
 router = APIRouter(prefix="/picks", tags=["picks"])
 
@@ -434,3 +443,50 @@ def picks_engine_review_now(db: DbDep, deps: DepsDep, _: UserDep) -> EngineRevie
     rev = run_engine_review(db, ny_date(deps.now()))
     db.flush()
     return _review_out(rev)
+
+
+MAX_SERIES_POINTS = 400
+
+
+@router.get("/quotes", response_model=PicksQuotesOut)
+def picks_quotes(
+    db: DbDep, deps: DepsDep, _: UserDep, date: dt.date | None = None
+) -> PicksQuotesOut:
+    """Latest price and intraday samples for the day's picks and top runners-up.
+
+    Live changes after this snapshot arrive as SSE ``picks_quote`` events.
+    """
+    now = deps.now()
+    day = date or ny_date(now)
+    rows = db.scalars(
+        select(PickQuoteRow)
+        .where(PickQuoteRow.session_date == day)
+        .order_by(PickQuoteRow.symbol, PickQuoteRow.ts)
+    )
+    by_symbol: dict[str, list[PickQuoteRow]] = {}
+    for r in rows:
+        by_symbol.setdefault(r.symbol, []).append(r)
+    quotes: list[SymbolQuotes] = []
+    for sym, pts in sorted(by_symbol.items()):
+        step = max(1, -(-len(pts) // MAX_SERIES_POINTS))
+        sampled = pts[::step]
+        if sampled[-1] is not pts[-1]:
+            sampled.append(pts[-1])
+        quotes.append(
+            SymbolQuotes(
+                symbol=sym,
+                last=pts[-1].price,
+                open=pts[-1].day_open,
+                change_pct=((pts[-1].price / pts[-1].day_open - 1) * HUNDRED).quantize(PCT),
+                ts=pts[-1].ts,
+                series=[QuotePoint(ts=p.ts, price=p.price) for p in sampled],
+            )
+        )
+    sess = session_for(day)
+    return PicksQuotesOut(
+        session_date=day,
+        market_open=sess is not None and sess.open <= now < sess.close,
+        interval_seconds=QUOTE_INTERVAL_SECONDS,
+        as_of=max((q.ts for q in quotes), default=None),
+        quotes=quotes,
+    )

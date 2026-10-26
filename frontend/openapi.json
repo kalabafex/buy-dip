@@ -2333,6 +2333,51 @@
         "title": "PicksPerformancePoint",
         "type": "object"
       },
+      "PicksQuotesOut": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "interval_seconds": {
+            "title": "Interval Seconds",
+            "type": "integer"
+          },
+          "market_open": {
+            "title": "Market Open",
+            "type": "boolean"
+          },
+          "quotes": {
+            "items": {
+              "$ref": "#/components/schemas/SymbolQuotes"
+            },
+            "title": "Quotes",
+            "type": "array"
+          },
+          "session_date": {
+            "format": "date",
+            "title": "Session Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_date",
+          "market_open",
+          "interval_seconds",
+          "as_of",
+          "quotes"
+        ],
+        "title": "PicksQuotesOut",
+        "type": "object"
+      },
       "PicksSettingsIn": {
         "properties": {
           "autotrade": {
@@ -2606,6 +2651,25 @@
           "baseline"
         ],
         "title": "ProfitPoint",
+        "type": "object"
+      },
+      "QuotePoint": {
+        "properties": {
+          "price": {
+            "title": "Price",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ts",
+          "price"
+        ],
+        "title": "QuotePoint",
         "type": "object"
       },
       "ReauthIn": {
@@ -3824,6 +3888,48 @@
         "title": "SettingsOut",
         "type": "object"
       },
+      "SymbolQuotes": {
+        "properties": {
+          "change_pct": {
+            "title": "Change Pct",
+            "type": "string"
+          },
+          "last": {
+            "title": "Last",
+            "type": "string"
+          },
+          "open": {
+            "title": "Open",
+            "type": "string"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/QuotePoint"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "ts": {
+            "format": "date-time",
+            "title": "Ts",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "last",
+          "open",
+          "change_pct",
+          "ts",
+          "series"
+        ],
+        "title": "SymbolQuotes",
+        "type": "object"
+      },
       "Tier-Input": {
         "properties": {
           "amount_usd": {
@@ -4888,6 +4994,57 @@
           }
         },
         "summary": "Picks Performance",
+        "tags": [
+          "picks"
+        ]
+      }
+    },
+    "/api/picks/quotes": {
+      "get": {
+        "description": "Latest price and intraday samples for the day's picks and top runners-up.\n\nLive changes after this snapshot arrive as SSE ``picks_quote`` events.",
+        "operationId": "picks_quotes_api_picks_quotes_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PicksQuotesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Picks Quotes",
         "tags": [
           "picks"
         ]

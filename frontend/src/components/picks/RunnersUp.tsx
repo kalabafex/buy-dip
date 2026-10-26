@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeaderRow } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fmtPct } from "@/lib/format";
+import { fmtPct, fmtPrice } from "@/lib/format";
 import { fmtRangePct, isSuspendedByReasons, type Candidate } from "@/lib/engine";
 import { exitReasonText, num } from "@/lib/picks";
+import type { Live } from "@/lib/live";
 import { cn } from "@/lib/utils";
 
 const INITIAL_ROWS = 10;
@@ -45,8 +46,20 @@ function Result({ c }: { c: Candidate }) {
   );
 }
 
+function LiveCell({ q }: { q: Live | undefined }) {
+  if (!q) return <TableCell className="text-right text-2xs text-muted-foreground">—</TableCell>;
+  return (
+    <TableCell className="num text-right">
+      <div>{fmtPrice(q.price)}</div>
+      <Signed value={q.changePct} className="text-2xs">
+        {fmtPct(q.changePct, 2, true)}
+      </Signed>
+    </TableCell>
+  );
+}
+
 /** Runners-up of a day (scored but not picked) — tracked so the weekly review has more evidence. */
-export function RunnersUp({ date, enabled }: { date: string; enabled: boolean }) {
+export function RunnersUp({ date, enabled, live }: { date: string; enabled: boolean; live?: Map<string, Live> }) {
   const q = usePicksCandidates(date, enabled);
   const [open, setOpen] = useState<Set<number>>(new Set());
   const [all, setAll] = useState(false);
@@ -63,6 +76,8 @@ export function RunnersUp({ date, enabled }: { date: string; enabled: boolean })
   const chosenAvg = chosenEval.length
     ? chosenEval.reduce((a, c) => a + (num(c.plan_return_pct) ?? 0), 0) / chosenEval.length
     : null;
+  const hasLive = !!live && rows.some((c) => live.has(c.symbol));
+  const cols = hasLive ? 7 : 6;
   const toggle = (rank: number) =>
     setOpen((s) => {
       const n = new Set(s);
@@ -108,6 +123,7 @@ export function RunnersUp({ date, enabled }: { date: string; enabled: boolean })
               <TableHead className="w-10">#</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead className="text-right">Projected</TableHead>
+              {hasLive && <TableHead className="text-right">Now</TableHead>}
               <TableHead className="hidden text-right sm:table-cell">Certainty</TableHead>
               <TableHead className="hidden sm:table-cell">State</TableHead>
               <TableHead className="text-right">Result</TableHead>
@@ -115,7 +131,7 @@ export function RunnersUp({ date, enabled }: { date: string; enabled: boolean })
           </TableHeader>
           <TableBody>
             {q.isPending ? (
-              <TableEmpty colSpan={6} loading />
+              <TableEmpty colSpan={cols} loading />
             ) : (
               shown.map((c) => {
                 const isOpen = open.has(c.score_rank);
@@ -159,6 +175,7 @@ export function RunnersUp({ date, enabled }: { date: string; enabled: boolean })
                           {fmtRangePct(num(c.projected_low_pct) ?? 0)} to {fmtRangePct(num(c.projected_high_pct) ?? 0)}
                         </div>
                       </TableCell>
+                      {hasLive && <LiveCell q={live?.get(c.symbol)} />}
                       <TableCell className="hidden text-right sm:table-cell">{Math.round(num(c.certainty_pct) ?? 0)}%</TableCell>
                       <TableCell className="hidden sm:table-cell">
                         <StateBadge c={c} />
@@ -169,7 +186,7 @@ export function RunnersUp({ date, enabled }: { date: string; enabled: boolean })
                     </TableRow>
                     {isOpen && (
                       <TableRow id={id} className="bg-muted/40 hover:bg-muted/40">
-                        <TableCell colSpan={6} className="whitespace-normal pb-4 pt-1">
+                        <TableCell colSpan={cols} className="whitespace-normal pb-4 pt-1">
                           <div className="grid gap-2 sm:pl-5">
                             <div className="flex flex-wrap items-center gap-2 text-2xs text-muted-foreground">
                               <span className="sm:hidden">

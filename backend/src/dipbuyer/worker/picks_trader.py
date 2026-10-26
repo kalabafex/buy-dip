@@ -24,7 +24,7 @@ from collections.abc import Callable
 from decimal import Decimal
 from enum import StrEnum
 
-from sqlalchemy import Engine, select
+from sqlalchemy import Engine, delete, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from dipbuyer.alerts import Notifier
@@ -44,6 +44,7 @@ from dipbuyer.persistence.models import (
     EngineVersionRow,
     PickCandidateRow,
     PickModelRow,
+    PickQuoteRow,
 )
 from dipbuyer.picks import calibrate as cal
 from dipbuyer.picks.engine import EngineParams
@@ -69,6 +70,10 @@ LATE_ENTRY = dt.timedelta(minutes=30)
 EVALUATE_AFTER_CLOSE = dt.timedelta(minutes=15)
 PREFETCH_BEFORE_OPEN = dt.timedelta(minutes=40)
 SUBMIT_ORPHAN_AFTER = dt.timedelta(minutes=2)
+QUOTE_INTERVAL_SECONDS = 15
+LIVE_RUNNERS_UP = 10
+QUOTES_AFTER_CLOSE = dt.timedelta(minutes=2)
+QUOTES_KEEP_DAYS = 30
 
 
 class PickStatus(StrEnum):
@@ -193,6 +198,7 @@ class PicksTrader:
         self.notifier = notifier
         self.now = now
         self._done: set[tuple[str, dt.date]] = set()
+        self._last_quote: dict[tuple[str, dt.date], tuple[dt.datetime | None, Decimal]] = {}
 
     # --- calibration ------------------------------------------------------------------
     def run_calibrations(self) -> int:
@@ -265,6 +271,66 @@ class PicksTrader:
             f"{result.symbols} stocks, {result.start} to {result.end}. "
             f"Setups with a validated edge: {', '.join(accepted) or 'none'}.",
         )
+
+    # --- live quotes ---------------------------------------------------------------------
+    def poll_quotes(self) -> int:
+        """During the session, sample prices for today's picks and top runners-up and push
+        them to the browser (SSE ``picks_quote``). Returns the number of quotes stored."""
+        now = self.now()
+        today = ny_date(now)
+        sess = session_for(today)
+        if sess is None or not (sess.open <= now <= sess.close + QUOTES_AFTER_CLOSE):
+            return 0
+        with session_scope(self.sf) as s:
+            symbols = set(
+                s.scalars(select(DailyPickRow.symbol).where(DailyPickRow.session_date == today))
+            )
+            symbols |= set(
+                s.scalars(
+                    select(PickCandidateRow.symbol).where(
+                        PickCandidateRow.session_date == today,
+                        PickCandidateRow.score_rank <= LIVE_RUNNERS_UP + PICKS_PER_DAY,
+                    )
+                )
+            )
+            mode = repo.settings_model(repo.get_settings_row(s)).trading_mode
+        if not symbols:
+            return 0
+        self._last_quote = {k: v for k, v in self._last_quote.items() if k[1] == today}
+        snaps = self.md_factory(mode).get_snapshots(sorted(symbols))
+        fresh: list[dict[str, str]] = []
+        with session_scope(self.sf) as s:
+            for sym, snap in snaps.items():
+                if snap.session_date != today:
+                    continue
+                ts = snap.as_of or now
+                key = (sym, today)
+                seen = (snap.as_of, snap.last)
+                if self._last_quote.get(key) == seen:
+                    continue
+                self._last_quote[key] = seen
+                s.add(
+                    PickQuoteRow(
+                        session_date=today, symbol=sym, ts=ts, price=snap.last, day_open=snap.open
+                    )
+                )
+                fresh.append(
+                    {
+                        "symbol": sym,
+                        "price": str(snap.last),
+                        "open": str(snap.open),
+                        "ts": ts.isoformat(),
+                    }
+                )
+            if fresh:
+                notify(s, "picks_quote", {"session_date": today.isoformat(), "quotes": fresh})
+            if self._once("quotes_cleanup", today):
+                s.execute(
+                    delete(PickQuoteRow).where(
+                        PickQuoteRow.session_date < today - dt.timedelta(days=QUOTES_KEEP_DAYS)
+                    )
+                )
+        return len(fresh)
 
     # --- weekly engine review ------------------------------------------------------------
     def run_weekly_review(self) -> bool:

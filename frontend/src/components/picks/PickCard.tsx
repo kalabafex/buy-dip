@@ -1,6 +1,7 @@
 import { AlertTriangle, Check, Clock, Cpu, Eye, LogIn, ShieldAlert, Target, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { Signed } from "@/components/common";
+import { LiveStrip } from "@/components/picks/Live";
 import { PriceLadder } from "@/components/picks/PriceLadder";
 import { Eyebrow, PickStatusBadge } from "@/components/picks/parts";
 import { CertaintyFigure, ProjectedMove } from "@/components/picks/Projection";
@@ -10,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { InfoPopover } from "@/components/ui/popover";
 import { fmtNum, fmtPct, fmtPrice, fmtUsd, fmtUsdSigned } from "@/lib/format";
 import { ENTRY_BUFFER_PCT, exitReasonText, featureNum, fmtEt, num, type Pick } from "@/lib/picks";
+import type { Live } from "@/lib/live";
 import { cn } from "@/lib/utils";
 
 type StepState = "todo" | "done" | "hit-bad" | "skipped";
@@ -232,7 +234,7 @@ function Outcome({ pick }: { pick: Pick }) {
   );
 }
 
-export function PickCard({ pick }: { pick: Pick }) {
+export function PickCard({ pick, live, now }: { pick: Pick; live?: Live; now: number }) {
   const watch = pick.status === "WATCH";
   const top = pick.rank === 1 && !watch;
   const projected = num(pick.projected_move_pct) ?? num(pick.expected_return_pct) ?? 0;
@@ -338,6 +340,8 @@ export function PickCard({ pick }: { pick: Pick }) {
         </div>
       )}
 
+      {live && <LiveStrip pick={pick} live={live} now={now} />}
+
       {/* Hero numbers */}
       <div className={cn("grid grid-cols-2 gap-x-5 gap-y-4 border-b px-4 py-4 sm:gap-x-8 sm:px-5", watch && "opacity-80")}>
         <ProjectedMove
@@ -369,7 +373,7 @@ export function PickCard({ pick }: { pick: Pick }) {
         <div className="grid content-start gap-5 border-t pt-4 md:border-t-0 md:pt-0 2xl:contents">
           <div className="grid content-start gap-1.5">
             <Eyebrow>Levels</Eyebrow>
-            <PriceLadder pick={pick} />
+            <PriceLadder pick={pick} livePrice={live?.price ?? null} />
           </div>
           <Outcome pick={pick} />
         </div>

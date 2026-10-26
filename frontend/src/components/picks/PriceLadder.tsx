@@ -9,7 +9,15 @@ type Level = { key: string; value: number };
  * low–high range, open and close underneath once known, and the actual fills as rings.
  * Values are listed in the key below, so nothing depends on reading the scale.
  */
-export function PriceLadder({ pick, className }: { pick: Pick; className?: string }) {
+export function PriceLadder({
+  pick,
+  livePrice = null,
+  className,
+}: {
+  pick: Pick;
+  livePrice?: number | null;
+  className?: string;
+}) {
   const entry = num(pick.entry_limit) ?? 0;
   const stop = num(pick.stop_price);
   const target = num(pick.target_price);
@@ -21,7 +29,7 @@ export function PriceLadder({ pick, className }: { pick: Pick; className?: strin
   const sell = num(pick.exit_fill_price);
   const atr = featureNum(pick, "atr");
 
-  const values = [entry, stop, target, open, low, high, close, buy, sell].filter(
+  const values = [entry, stop, target, open, low, high, close, buy, sell, livePrice].filter(
     (v): v is number => v !== null && v > 0,
   );
   let lo = Math.min(...values);
@@ -51,6 +59,7 @@ export function PriceLadder({ pick, className }: { pick: Pick; className?: strin
   const label = [
     `Plan: ${stop !== null ? `stop ${fmtPrice(stop)}, ` : "no stop, "}buy up to ${fmtPrice(entry)}${target !== null ? `, target ${fmtPrice(target)}` : ", no target"}.`,
     hasDay ? `Day range ${fmtPrice(low)} to ${fmtPrice(high)}, close ${fmtPrice(close)}.` : "",
+    livePrice !== null ? `Now ${fmtPrice(livePrice)}.` : "",
   ].join(" ");
 
   return (
@@ -90,6 +99,17 @@ export function PriceLadder({ pick, className }: { pick: Pick; className?: strin
                 style={{ left: x(v) }}
               />
             ) : null,
+          )}
+          {livePrice !== null && livePrice > 0 && (
+            <span
+              aria-hidden
+              data-testid="ladder-now"
+              className="absolute top-1/2 flex h-3 w-3 -translate-x-1/2 -translate-y-1/2 transition-[left] duration-700 ease-out"
+              style={{ left: x(livePrice) }}
+            >
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-info opacity-50" />
+              <span className="relative inline-flex h-3 w-3 rounded-full border-2 border-card bg-info" />
+            </span>
           )}
         </div>
         {/* Day row */}
@@ -138,6 +158,7 @@ export function PriceLadder({ pick, className }: { pick: Pick; className?: strin
         ) : (
           open !== null && <Key swatch="bg-muted-foreground/60" thin label="Open" value={fmtPrice(open)} />
         )}
+        {livePrice !== null && <Key dot="bg-info" label="Now" value={fmtPrice(livePrice)} />}
         {(buy !== null || sell !== null) && (
           <Key dot="bg-primary" label="Fills" value={[buy, sell].filter((v) => v !== null).map(fmtPrice).join(" → ")} />
         )}

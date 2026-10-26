@@ -93,6 +93,20 @@ direction hit rate, certainty vs actual win rate by bucket, per-setup results) a
 change with its reason. The Engine page shows versions and reviews; "Review now" runs one
 immediately.
 
+## Live updates
+
+* While the market is open (and for two minutes after the close) the worker reads the latest
+  trade price of the 3 picks and the top 10 runners-up every 15 seconds in one snapshot
+  request. New prices are stored in `pick_quotes` and pushed to the browser as an SSE
+  `picks_quote` event; the page patches its cache directly, without refetching.
+* Each pick shows the price now and its move since the open, the unrealized P/L of an open
+  position, how far the target and stop are, an intraday sparkline and a "now" marker on the
+  price ladder. Runners-up get a "Now" column.
+* `GET /api/picks/quotes?date=` returns the latest price, open and intraday samples per symbol
+  (at most ~400 points each) for a page load or reconnect. The indicator next to the date
+  turns grey ("Delayed") if no new price arrives for 90 seconds.
+* Unchanged prices are not stored twice; samples older than 30 days are deleted.
+
 ## Trading rules
 
 * Auto-trade is **off by default** and runs **only in PAPER mode**; the kill switch blocks

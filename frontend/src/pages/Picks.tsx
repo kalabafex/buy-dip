@@ -2,10 +2,11 @@ import { CalendarOff, ChevronLeft, ChevronRight, Hourglass, Loader2, SearchX, Sl
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import type { Schemas } from "@/api/client";
-import { usePicksDay, usePicksDays } from "@/api/queries";
+import { usePicksDay, usePicksDays, usePicksQuotes } from "@/api/queries";
 import { EmptyState, ErrorBox, PageHeader } from "@/components/common";
 import { AutoTradeCard } from "@/components/picks/AutoTradeCard";
 import { CalibrationProgress, NoModelCard } from "@/components/picks/Calibration";
+import { LiveIndicator } from "@/components/picks/Live";
 import { PickCard } from "@/components/picks/PickCard";
 import { RunnersUp } from "@/components/picks/RunnersUp";
 import { DayTotals, PicksCaveat, PicksTabs } from "@/components/picks/sections";
@@ -17,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { fmtDay } from "@/lib/format";
 import { useNow } from "@/lib/hooks";
+import { liveMap } from "@/lib/live";
 import {
   dayPhase,
   fmtCountdown,
@@ -189,6 +191,9 @@ export function PicksPage() {
   const current = day?.session_date ?? requested ?? today;
   const isToday = current === today;
   const phase = useMemo(() => (day ? dayPhase(day, now) : null), [day, now]);
+  const quotes = usePicksQuotes(current, !!day?.generated);
+  const live = useMemo(() => liveMap(quotes.data), [quotes.data]);
+  const tick = useNow(1_000);
   const go = (d: string) => setParams(d === today ? {} : { date: d });
 
   const header = (
@@ -249,10 +254,10 @@ export function PicksPage() {
         <DayTotals day={day} />
         <section aria-label="Picks" className={`grid gap-4 transition-opacity ${query.isPlaceholderData ? "opacity-60" : ""}`}>
           {day.picks.map((p) => (
-            <PickCard key={p.id} pick={p} />
+            <PickCard key={p.id} pick={p} live={live.get(p.symbol)} now={tick} />
           ))}
         </section>
-        <RunnersUp date={day.session_date} enabled={day.generated} />
+        <RunnersUp date={day.session_date} enabled={day.generated} live={live} />
       </>
     );
   }
@@ -269,7 +274,12 @@ export function PicksPage() {
                 {fmtSessionDate(day.session_date)}
                 {isToday && <Badge variant="info">Today</Badge>}
               </h2>
-              <p className="text-xs text-muted-foreground">All times New York (ET)</p>
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                All times New York (ET)
+                {isToday && day.generated && quotes.data && (
+                  <LiveIndicator asOf={quotes.data.as_of} marketOpen={quotes.data.market_open} now={tick} />
+                )}
+              </p>
             </div>
             <DateNav current={current} today={today} days={days.data} onGo={go} />
           </div>

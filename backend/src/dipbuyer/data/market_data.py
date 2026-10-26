@@ -154,6 +154,7 @@ class AlpacaMarketData:
                     low=to_decimal(db.low),
                     last=to_decimal(last),
                     prev_close=to_decimal(prev) if prev is not None else None,
+                    as_of=(snap.latest_trade.timestamp if snap.latest_trade is not None else None),
                 )
         return out
 

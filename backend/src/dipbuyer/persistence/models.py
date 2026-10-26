@@ -353,6 +353,20 @@ class PickCandidateRow(Base):
     created_at: Mapped[dt.datetime] = mapped_column(default=utcnow)
 
 
+class PickQuoteRow(Base):
+    """Intraday price samples for the day's picks and top runners-up (live updates)."""
+
+    __tablename__ = "pick_quotes"
+    __table_args__ = (Index("ix_pick_quotes_day_symbol_ts", "session_date", "symbol", "ts"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    session_date: Mapped[dt.date] = mapped_column(Date)
+    symbol: Mapped[str] = mapped_column(String(12))
+    ts: Mapped[dt.datetime]
+    price: Mapped[Decimal]
+    day_open: Mapped[Decimal]
+
+
 class EngineVersionRow(Base):
     """Engine parameters tuned by weekly reviews (version 1 = untuned defaults)."""
 

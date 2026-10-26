@@ -72,7 +72,7 @@ def db_engine(pg_url: str) -> Iterator[Engine]:
 
 
 TABLES = (
-    "engine_versions, engine_reviews, pick_candidates, daily_picks, pick_models, "
+    "pick_quotes, engine_versions, engine_reviews, pick_candidates, daily_picks, pick_models, "
     "recommendations, "
     "position_snapshots, account_snapshots, evaluations, order_intents, dip_cycles, "
     "backtests, bars_daily, audit_log, rules"

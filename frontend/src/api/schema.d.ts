@@ -354,6 +354,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/picks/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Picks Quotes
+         * @description Latest price and intraday samples for the day's picks and top runners-up.
+         *
+         *     Live changes after this snapshot arrive as SSE ``picks_quote`` events.
+         */
+        get: operations["picks_quotes_api_picks_quotes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/picks/settings": {
         parameters: {
             query?: never;
@@ -1340,6 +1362,22 @@ export interface components {
              */
             session_date: string;
         };
+        /** PicksQuotesOut */
+        PicksQuotesOut: {
+            /** As Of */
+            as_of: string | null;
+            /** Interval Seconds */
+            interval_seconds: number;
+            /** Market Open */
+            market_open: boolean;
+            /** Quotes */
+            quotes: components["schemas"]["SymbolQuotes"][];
+            /**
+             * Session Date
+             * Format: date
+             */
+            session_date: string;
+        };
         /** PicksSettingsIn */
         PicksSettingsIn: {
             /** Autotrade */
@@ -1419,6 +1457,16 @@ export interface components {
             hold?: string | null;
             /** Rule */
             rule: string;
+        };
+        /** QuotePoint */
+        QuotePoint: {
+            /** Price */
+            price: string;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
         };
         /** ReauthIn */
         ReauthIn: {
@@ -1843,6 +1891,24 @@ export interface components {
             /** Spend Week */
             spend_week: string;
             trading_mode: components["schemas"]["TradingMode"];
+        };
+        /** SymbolQuotes */
+        SymbolQuotes: {
+            /** Change Pct */
+            change_pct: string;
+            /** Last */
+            last: string;
+            /** Open */
+            open: string;
+            /** Series */
+            series: components["schemas"]["QuotePoint"][];
+            /** Symbol */
+            symbol: string;
+            /**
+             * Ts
+             * Format: date-time
+             */
+            ts: string;
         };
         /** Tier */
         "Tier-Input": {
@@ -2465,6 +2531,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PicksPerformanceOut"];
+                };
+            };
+        };
+    };
+    picks_quotes_api_picks_quotes_get: {
+        parameters: {
+            query?: {
+                date?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PicksQuotesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

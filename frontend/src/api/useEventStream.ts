@@ -1,5 +1,6 @@
 import { useQueryClient, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { applyQuoteEvent } from "@/lib/live";
 import { qk } from "./queries";
 
 export type StreamState = "connecting" | "open" | "closed";
@@ -65,6 +66,7 @@ export function useEventStream(enabled: boolean): StreamState {
           for (const queryKey of keys) void qc.invalidateQueries({ queryKey });
         });
       }
+      es.addEventListener("picks_quote", (e) => applyQuoteEvent(qc, (e as MessageEvent<string>).data));
       es.addEventListener("backtest", (e) => onJobEvent(qc, "backtest", (e as MessageEvent<string>).data));
       es.addEventListener("recommendation", (e) =>
         onJobEvent(qc, "recommendation", (e as MessageEvent<string>).data),

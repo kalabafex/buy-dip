@@ -105,6 +105,8 @@ class DaySnapshot(Frozen):
     low: Decimal
     last: Decimal
     prev_close: Decimal | None = None
+    as_of: dt.datetime | None = None
+    """Time of the latest trade (UTC)."""
 
 
 class IndicatorSnapshot(Frozen):

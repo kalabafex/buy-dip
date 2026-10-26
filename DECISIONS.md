@@ -245,3 +245,10 @@ Choices made where the spec was silent or ambiguous, and every deviation from it
 63. The weekly review only changes bounded parameters (per-setup multipliers, suspensions,
     certainty calibration) in partial steps and with minimum evidence, to avoid chasing noise.
     The models themselves are refitted by the weekly calibration on refreshed history.
+
+## Live pick updates
+
+64. Live prices for the picks come from the worker (one snapshot request for 13 symbols every
+    15 s) rather than a browser-side market-data websocket: the API keys stay on the server,
+    it fits the free plan's limits, and the same SSE channel already reaches the page. The
+    samples are stored so a reload shows the intraday line, not just the latest price.
